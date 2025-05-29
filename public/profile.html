@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil</title> <!-- El título se actualizará con JS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="page-overlay" id="pageOverlay"></div>
+    <header>
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <div class="header-search-container" id="headerSearchContainer" style="display: none;">
+            <input type="text" id="headerUserIdInput" placeholder="Buscar usuario...">
+            <button id="headerSearchUserButton" class="search-icon-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px"
+                    height="20px">
+                    <path
+                        d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                </svg>
+            </button>
+        </div>
+        <div id="userInfoArea" class="user-info-header" style="display: none;">
+            <span id="loggedInUserName"></span>
+            <!-- El botón de logout está en el sidebar -->
+        </div>
+    </header>
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header-controls">
+                <button id="sidebarLogoutButton" class="sidebar-logout-btn" title="Cerrar Sesión"
+                    style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px"
+                        height="22px">
+                        <path d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="sidebar-profile" id="sidebarProfileInfo" style="display: none;">
+                <!-- La imagen de perfil del sidebar se actualiza por JS -->
+                <img src="placeholder-profile.jpg" alt="Foto de perfil" id="sidebarProfilePic" class="profile-pic">
+                <span id="sidebarProfileName" class="profile-name">Usuario</span>
+            </div>
+            <ul>
+                <li><a href="index.html">📊 Estadísticas</a></li>
+                <li><a href="juegos.html">🎲 Juegos</a></li>
+                <!-- El ID es para que profile.js controle su visibilidad y estado 'active' -->
+                <li id="sidebarMyProfileLinkContainer"><a href="profile.html" class="active">👤 Mi Perfil</a></li>
+            </ul>
+        </nav>
+        <main class="content">
+            <div class="user-profile-page">
+                <div class="profile-header">
+                    <!-- La clase 'editable' se añadirá con JS si es el perfil del usuario logueado -->
+                    <div class="profile-cover-photo">
+                        <img src="placeholder-cover.jpg" alt="Foto de portada" id="userCoverPhoto">
+                        <div class="profile-badge" id="userProfileRankBadge" style="display:none;">
+                            <!-- El contenido del badge (medalla/número) se insertará aquí por JS -->
+                        </div>
+                    </div>
+                    <!-- La clase 'editable' se añadirá con JS si es el perfil del usuario logueado -->
+                    <div class="profile-picture-section">
+                        <img src="placeholder-profile.jpg" alt="Foto de perfil" id="userProfilePhoto"
+                            class="profile-main-pic">
+                    </div>
+                </div>
+
+                <div class="profile-info-actions">
+                    <h1 id="userProfileName" class="profile-main-name">Cargando nombre...</h1>
+                    
+                    <!-- Formulario de edición de nombre (oculto por defecto) -->
+                    <div id="editNameContainer" class="edit-name-container" style="display: none;">
+                        <input type="text" id="editNameInput" class="edit-name-input" placeholder="Nuevo nombre de usuario">
+                        <div class="edit-name-buttons">
+                            <button id="saveNameButton" class="save-name-btn">Guardar</button>
+                            <button id="cancelEditNameButton" class="cancel-name-btn">Cancelar</button>
+                        </div>
+                        <p id="editNameStatus" class="message-area" style="display:none;"></p>
+                    </div>
+
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="userFollowers">--</span>
+                        <span class="stat-label">Seguidores</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="userFollowing">--</span>
+                        <span class="stat-label">Siguiendo</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="userMoneyTotal">--</span>
+                        <span class="stat-label">Dinero</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="userExperience">--</span>
+                        <span class="stat-label">Experiencia</span>
+                    </div>
+                </div>
+
+                <div id="userFullDetails" class="user-info-card" style="margin-top: 30px;">
+                    <p>Cargando detalles adicionales...</p>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ***** MODAL PARA SEGUIDORES/SIGUIENDO ***** -->
+    <div id="followListModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <button id="closeFollowListModal" class="modal-close-btn">×</button>
+            <div class="modal-tabs">
+                <button id="tabFollowers" class="modal-tab-button active" data-tab="followers">Seguidores</button>
+                <button id="tabFollowing" class="modal-tab-button" data-tab="following">Siguiendo</button>
+            </div>
+            <div id="modalUserListContainer" class="modal-user-list">
+                <p>Cargando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ***** MODAL PARA VISUALIZAR/CAMBIAR IMAGEN ***** -->
+    <div id="imageEditModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content image-modal-content">
+            <button id="closeImageEditModal" class="modal-close-btn">×</button>
+            <h3 id="imageEditModalTitle">Cambiar Foto</h3> <!-- El título cambiará según sea perfil o portada -->
+            <div class="image-preview-container">
+                <img src="" alt="Previsualización de imagen" id="imageEditPreview" class="image-preview">
+            </div>
+            <div class="image-upload-actions">
+                <!-- Input de archivo oculto, se activa con el botón -->
+                <input type="file" id="imageUploadInput" accept="image/png, image/jpeg, image/gif"
+                    style="display: none;">
+                <button id="triggerImageUploadButton" class="button-change-photo">Seleccionar Archivo</button>
+                <button id="saveImageButton" style="display: none;">Guardar Cambios</button>
+                <p id="uploadStatusMessage" class="message-area" style="display:none;"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script> <!-- Script general para header, sidebar, login, overlay, etc. -->
+    <script src="profile.js"></script> <!-- Script específico para la lógica de la página de perfil -->
+</body>
+
+</html>

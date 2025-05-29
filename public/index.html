@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas del Bot</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="page-overlay" id="pageOverlay"></div>
+    <header>
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <div class="header-search-container" id="headerSearchContainer" style="display: none;">
+            <input type="text" id="headerUserIdInput" placeholder="Buscar usuario...">
+            <button id="headerSearchUserButton" class="search-icon-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px"
+                    height="20px">
+                    <path
+                        d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                </svg>
+            </button>
+        </div>
+        <!-- SECCIÓN userInfoArea MODIFICADA: Solo mostrará el nombre, el botón de logout se mueve -->
+        <div id="userInfoArea" class="user-info-header" style="display: none;">
+            <span id="loggedInUserName"></span>
+            <!-- BOTÓN DE LOGOUT ELIMINADO DE AQUÍ -->
+        </div>
+    </header>
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <!-- ***** INICIO BOTÓN DE LOGOUT EN SIDEBAR ***** -->
+            <div class="sidebar-header-controls">
+                <button id="sidebarLogoutButton" class="sidebar-logout-btn" title="Cerrar Sesión"
+                    style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px"
+                        height="22px">
+                        <path d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </svg>
+                </button>
+                <!-- Aquí podría ir un logo o título del sidebar si se desea -->
+            </div>
+            <!-- ***** FIN BOTÓN DE LOGOUT EN SIDEBAR ***** -->
+
+            <div class="sidebar-profile" id="sidebarProfileInfo" style="display: none;">
+                <img src="placeholder-profile.jpg" alt="Foto de perfil" id="sidebarProfilePic" class="profile-pic">
+                <span id="sidebarProfileName" class="profile-name">Usuario</span>
+            </div>
+            <ul>
+                <li><a href="index.html" class="active">📊 Estadísticas</a></li>
+                <li><a href="juegos.html">🎲 Juegos</a></li>
+            </ul>
+        </nav>
+        <main class="content">
+            <!-- ... (resto del main content sin cambios) ... -->
+            <h1>📊 Estadísticas del Bot de WhatsApp</h1>
+            <section id="login-section">
+                <h2>🔑 Iniciar Sesión</h2>
+                <input type="text" id="loginPhoneNumber" placeholder="Tu número (+51...)" autocomplete="username">
+                <input type="password" id="loginPassword" placeholder="Tu contraseña" autocomplete="current-password">
+                <button id="loginButton">Ingresar</button>
+                <div id="loginMessage" class="message-area"></div>
+            </section>
+            <div id="main-content" style="display: none;">
+                <section id="millonarios-section">
+                    <h2>🏆 Top Millonarios</h2>
+                    <div id="millonariosList" class="data-list"></div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
