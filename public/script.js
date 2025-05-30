@@ -3,17 +3,17 @@
 // --- FUNCIONES AUXILIARES GLOBALES ---
 function escapeHtmlForGlobalUI(unsafe) {
     if (unsafe === null || typeof unsafe === 'undefined') return '';
-    // Corregido para usar las entidades HTML correctas, importante para seguridad y visualización.
+    // CORREGIDO: Usar las entidades HTML correctas
     return String(unsafe)
          .replace(/&/g, "&")
          .replace(/</g, "<")
          .replace(/>/g, ">")
          .replace(/"/g, ".")
-         .replace(/'/g, "'");
+         .replace(/'/g, "'"); // O '
 }
 
 // --- FUNCIÓN GLOBAL PARA ACTUALIZAR LA UI DEL USUARIO (SIDEBAR, HEADER) ---
-window.updateGlobalUserUI = function(userDataObject) { // Renombrado parámetro para claridad
+window.updateGlobalUserUI = function(userDataObject) {
     const sidebarProfileInfoDiv = document.getElementById('sidebarProfileInfo');
     const sidebarProfilePicImg = document.getElementById('sidebarProfilePic');
     const sidebarProfileNameSpan = document.getElementById('sidebarProfileName');
@@ -25,7 +25,8 @@ window.updateGlobalUserUI = function(userDataObject) { // Renombrado parámetro 
     if (userDataObject && userDataObject.userId) {
         if (sidebarProfileInfoDiv) sidebarProfileInfoDiv.style.display = 'flex';
         if (sidebarProfilePicImg) {
-            sidebarProfilePicImg.src = userDataObject.profilePhotoPath ? `/${userDataObject.profilePhotoPath}` : 'placeholder-profile.jpg'; // Corregido placeholder
+            // Usar la ruta correcta y el placeholder consistente
+            sidebarProfilePicImg.src = userDataObject.profilePhotoPath ? `/${userDataObject.profilePhotoPath}` : 'placeholder-profile.jpg'; 
             sidebarProfilePicImg.alt = `Foto de ${escapeHtmlForGlobalUI(userDataObject.pushname) || 'Usuario'}`;
         }
         if (sidebarProfileNameSpan) {
@@ -39,7 +40,7 @@ window.updateGlobalUserUI = function(userDataObject) { // Renombrado parámetro 
         if (headerSearchContainerGlobal) headerSearchContainerGlobal.style.display = 'flex';
     } else {
         if (sidebarProfileInfoDiv) sidebarProfileInfoDiv.style.display = 'none';
-        if (sidebarProfilePicImg) sidebarProfilePicImg.src = 'placeholder-profile.jpg'; // Corregido placeholder
+        if (sidebarProfilePicImg) sidebarProfilePicImg.src = 'placeholder-profile.jpg'; // Placeholder consistente
         if (sidebarProfileNameSpan) sidebarProfileNameSpan.textContent = 'Usuario';
         if (loggedInUserNameSpanHeader) loggedInUserNameSpanHeader.textContent = '';
         if (userInfoAreaHeader) userInfoAreaHeader.style.display = 'none';
@@ -51,7 +52,7 @@ window.updateGlobalUserUI = function(userDataObject) { // Renombrado parámetro 
 // --- LISTENER PARA EL EVENTO 'storage' ---
 window.addEventListener('storage', function(event) {
     if (event.key === 'loggedInUser') {
-        console.log('Evento storage detectado para loggedInUser:', event.key);
+        // console.log('Evento storage detectado para loggedInUser:', event.key); // Descomentar para depurar
         if (event.newValue) {
             try {
                 const updatedUser = JSON.parse(event.newValue);
@@ -65,10 +66,11 @@ window.addEventListener('storage', function(event) {
                 window.updateGlobalUserUI(null);
             }
         } else {
-            console.log('loggedInUser eliminado de localStorage (logout en otra pestaña).');
+            // console.log('loggedInUser eliminado de localStorage (logout en otra pestaña).'); // Descomentar para depurar
             window.updateGlobalUserUI(null);
             const loginSect = document.getElementById('login-section');
             const mainCont = document.getElementById('main-content');
+            // Asegurar que estos elementos existan antes de intentar modificar su estilo
             if (loginSect) loginSect.style.display = 'block';
             if (mainCont) mainCont.style.display = 'none';
         }
@@ -90,24 +92,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerUserIdInput = document.getElementById('headerUserIdInput');
     const headerSearchUserButton = document.getElementById('headerSearchUserButton');
     const sidebarProfileInfoDiv = document.getElementById('sidebarProfileInfo');
-    const sidebarLogoutButton = document.getElementById('sidebarLogoutButton'); // Definido aquí para su listener
-    const userInfoArea = document.getElementById('userInfoArea'); // Para mostrar/ocultar en login/logout
-    const headerSearchContainer = document.getElementById('headerSearchContainer'); // Para mostrar/ocultar
+    const sidebarLogoutButton = document.getElementById('sidebarLogoutButton');
+    const userInfoArea = document.getElementById('userInfoArea');
+    const headerSearchContainer = document.getElementById('headerSearchContainer');
 
     function showLogin() {
         if (loginSection) loginSection.style.display = 'block';
         if (mainContentDiv) mainContentDiv.style.display = 'none';
         window.updateGlobalUserUI(null);
         localStorage.removeItem('loggedInUser');
-        // Asegurar que los elementos del header que dependen del login también se oculten
         if (userInfoArea) userInfoArea.style.display = 'none';
         if (sidebarLogoutButton) sidebarLogoutButton.style.display = 'none';
         if (headerSearchContainer) headerSearchContainer.style.display = 'none';
     }
 
-    // CORREGIDO: El parámetro se llama 'userObjectReceived'
     async function showMainContent(userObjectReceived) { 
-        // CORREGIDO: Usar el nombre del parámetro 'userObjectReceived' consistentemente
         if (!userObjectReceived || !userObjectReceived.userId) { 
             console.error("showMainContent llamado sin datos de usuario válidos.");
             showLogin();
@@ -154,7 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             loginMessageDiv.textContent = 'Iniciando sesión...';
-            loginMessageDiv.className = 'message-area visible';
+            loginMessageDiv.className = 'message-area visible'; // Quitar 'success' o 'error' aquí
+            loginMessageDiv.classList.remove('success', 'error'); 
             try {
                 const response = await fetch(`${API_BASE_URL}/login`, {
                     method: 'POST',
@@ -164,16 +164,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 if (response.ok && data.user) {
                     loginMessageDiv.textContent = data.message;
-                    loginMessageDiv.className = 'message-area success visible';
+                    loginMessageDiv.classList.add('success'); // Añadir success aquí
                     await showMainContent(data.user);
                 } else {
                     loginMessageDiv.textContent = data.message || 'Error al iniciar sesión.';
-                    loginMessageDiv.className = 'message-area error visible';
+                    loginMessageDiv.classList.add('error'); // Añadir error aquí
                 }
             } catch (error) { 
                 console.error('Error en login:', error);
                 loginMessageDiv.textContent = 'Error de conexión al intentar iniciar sesión.';
-                loginMessageDiv.className = 'message-area error visible';
+                loginMessageDiv.className = 'message-area error visible'; // Asegurar .visible
             }
         });
     }
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let localLoggedInUserId = null;
             const localStoredUser = localStorage.getItem('loggedInUser');
             if(localStoredUser) {
-                try { localLoggedInUserId = JSON.parse(localStoredUser).userId; } catch(e) {}
+                try { localLoggedInUserId = JSON.parse(localStoredUser).userId; } catch(e) { console.error("Error parseando localLoggedInUser para click en sidebar", e);}
             }
 
             if (currentPath === 'profile.html' && (!queryUserId || queryUserId === localLoggedInUserId) && localLoggedInUserId) {
@@ -260,38 +260,90 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatTimestamp(timestamp) {
-        if (!timestamp || timestamp === 0) return 'Nunca';
+        console.log("[formatTimestamp] Valor de entrada:", timestamp, "| Tipo:", typeof timestamp); // Log inicial
+    
+        if (timestamp === null || timestamp === undefined || timestamp === 0 || timestamp === '') {
+            console.log("[formatTimestamp] Devolviendo 'Nunca' por valor nulo/vacío/cero.");
+            return 'Nunca';
+        }
+    
+        let dateObj;
+    
+        if (typeof timestamp === 'number') {
+            console.log("[formatTimestamp] Es tipo número.");
+            dateObj = new Date(timestamp);
+        } 
+        else if (typeof timestamp === 'string') {
+            console.log("[formatTimestamp] Es tipo string.");
+            const numericTimestamp = Number(timestamp);
+            console.log("[formatTimestamp] String convertida a número:", numericTimestamp, "| es NaN?:", isNaN(numericTimestamp));
+    
+            if (!isNaN(numericTimestamp) && String(numericTimestamp) === timestamp.trim()) { // Añadido .trim() por si acaso
+                console.log("[formatTimestamp] Es una cadena numérica válida. Usando el valor numérico.");
+                dateObj = new Date(numericTimestamp);
+            } else {
+                console.log("[formatTimestamp] No es una cadena puramente numérica o la conversión falló. Intentando parsear string directamente.");
+                dateObj = new Date(timestamp);
+            }
+        } 
+        else {
+            console.warn("[formatTimestamp] Tipo de timestamp no reconocido:", timestamp, typeof timestamp);
+            return 'Fecha no válida (tipo)';
+        }
+    
+        console.log("[formatTimestamp] Objeto Date antes de chequeo de validez:", dateObj);
+    
+        if (!dateObj || isNaN(dateObj.getTime())) { // Añadido chequeo por si dateObj es undefined
+            console.warn("[formatTimestamp] El valor resultó en 'Invalid Date'. Original:", timestamp, "| dateObj:", dateObj);
+            return 'Fecha inválida';
+        }
+    
+        console.log("[formatTimestamp] Fecha válida. Formateando:", dateObj);
         try {
-            return new Date(timestamp).toLocaleString('es-ES', { 
+            return dateObj.toLocaleString('es-ES', { 
                 day: '2-digit', month: '2-digit', year: 'numeric', 
-                hour: '2-digit', minute: '2-digit' 
+                hour: '2-digit', minute: '2-digit',
             });
-        } catch (e) { return 'Fecha inválida'; }
+        } catch (e) {
+            console.error("[formatTimestamp] Error formateando la fecha:", e, dateObj);
+            return 'Error al formatear';
+        }
     }
     
     const menuToggleButton = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
+    const sidebar = document.getElementById('sidebar'); // Asegúrate que tu <nav> del sidebar tenga id="sidebar"
     const pageOverlay = document.getElementById('pageOverlay');
 
     if (menuToggleButton && sidebar && pageOverlay) {
         menuToggleButton.addEventListener('click', (event) => {
-            event.stopPropagation();
+            event.stopPropagation(); // Prevenir que el clic se propague al body/document
             sidebar.classList.toggle('open');
             pageOverlay.classList.toggle('visible', sidebar.classList.contains('open'));
             document.body.classList.toggle('sidebar-open-no-scroll', sidebar.classList.contains('open'));
         });
-        pageOverlay.addEventListener('click', () => {
+
+        pageOverlay.addEventListener('click', () => { // Listener para cerrar al hacer clic en el overlay
             sidebar.classList.remove('open');
             pageOverlay.classList.remove('visible');
             document.body.classList.remove('sidebar-open-no-scroll');
         });
+
         sidebar.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const targetLink = event.target.closest('a');
+            // Prevenir que los clics DENTRO del sidebar cierren el overlay si el clic se propaga al overlay.
+            // Esto es importante si el overlay estuviera de alguna forma "detrás" y el clic pudiera pasar.
+            // Sin embargo, el principal objetivo aquí es manejar los clics en los enlaces.
+            event.stopPropagation(); 
+            
+            const targetLink = event.target.closest('a'); // Buscar el ancestro <a> más cercano
+            // Cerrar el sidebar en mobile si se hace clic en un enlace de navegación principal
+            // (no en un submenú de juego, por ejemplo, si tuvieras esa lógica)
             if (window.innerWidth <= 768 && targetLink && !targetLink.hasAttribute('data-noclose')) {
-                sidebar.classList.remove('open');
-                pageOverlay.classList.remove('visible');
-                document.body.classList.remove('sidebar-open-no-scroll');
+                // Si el enlace está en la lista principal de ul (no en #game-menu específicamente, o si quieres que todos cierren)
+                if (targetLink.closest('ul:not(#game-menu)')) { // Ejemplo: no cerrar para #game-menu
+                    sidebar.classList.remove('open');
+                    pageOverlay.classList.remove('visible');
+                    document.body.classList.remove('sidebar-open-no-scroll');
+                }
             }
         });
     }

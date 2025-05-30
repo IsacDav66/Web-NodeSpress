@@ -66,12 +66,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalMoney = (user.money || 0) + (user.bank || 0);
             const profilePicSrc = user.profilePhotoPath ? `/${user.profilePhotoPath}` : 'placeholder-profile.jpg';
 
-            listHTML += `
-                <li class="search-result-item" data-userid="${escapeHtml(user.userId)}">
-                    <img src="${profilePicSrc}" alt="Perfil de ${escapeHtml(user.pushname) || 'Usuario'}" class="result-profile-pic">
-                    <span class="result-username">${highlightMatch(escapeHtml(user.pushname) || 'N/A', originalQuery)}</span>
-                    <span class="result-money">${FRONTEND_MONEY_SYMBOL}${totalMoney.toLocaleString()}</span>
-                </li>`;
+             // ¡AQUÍ ESTÁ LA CLAVE! CÓMO SE ESTABLECE data-userid
+             listHTML += `
+             <li class="search-result-item" data-userid="${escapeHtml(user.userId)}"> 
+                 <img src="${profilePicSrc}" alt="Perfil de ${escapeHtml(user.pushname) || 'Usuario'}" class="result-profile-pic">
+                 <span class="result-username">${highlightMatch(escapeHtml(user.pushname) || 'N/A', originalQuery)}</span>
+                 <span class="result-money">${FRONTEND_MONEY_SYMBOL}${totalMoney.toLocaleString()}</span>
+             </li>`;
         });
         listHTML += '</ul>';
         searchResultsListDiv.innerHTML = listHTML;
@@ -79,8 +80,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Añadir event listeners a los items de la lista (sin cambios aquí)
         document.querySelectorAll('.search-result-item').forEach(item => {
             item.addEventListener('click', () => {
-                const userIdToView = item.dataset.userid;
-                window.location.href = `profile.html?id=${encodeURIComponent(userIdToView)}`;
+                // ¡Y AQUÍ CÓMO SE LEE!
+                const userIdToView = item.dataset.userid; // o item.getAttribute('data-userid');
+                console.log("Clicked user, ID to view:", userIdToView); // <--- AÑADE ESTE LOG PARA DEPURAR
+                if (userIdToView && userIdToView !== 'undefined') { // Añadir chequeo extra
+                    window.location.href = `profile.html?id=${encodeURIComponent(userIdToView)}`;
+                } else {
+                    console.error("Error: userIdToView es undefined o inválido al hacer clic.", item.dataset);
+                    alert("Error al intentar ver el perfil: ID de usuario no encontrado.");
+                }
             });
         });
 

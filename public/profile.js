@@ -254,48 +254,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saveNameButton) {
         saveNameButton.addEventListener('click', async () => {
             const newName = editNameInput.value.trim();
-            // Limpiar errores/estilos de error previos del input
+            
             editNameInput.classList.remove('input-error-pulse');
             editNameStatus.style.display = 'none';
             editNameStatus.textContent = '';
-            editNameStatus.className = 'message-area'; // Resetear clases de mensaje
+            editNameStatus.className = 'message-area';
 
-            // Validación de longitud del nombre
             if (newName.length < 3 || newName.length > 25) {
                 editNameStatus.textContent = "El nombre debe tener entre 3 y 25 caracteres.";
-                editNameStatus.className = 'message-area error visible'; // Mostrar mensaje de error
-                editNameStatus.style.display = 'block';
-                
-                editNameInput.classList.add('input-error-pulse'); // Resaltar el input
-                editNameInput.focus(); // Poner foco en el input
-                
-                // Opcional: quitar el resaltado después de un tiempo
-                setTimeout(() => {
-                    editNameInput.classList.remove('input-error-pulse');
-                }, 2000); // Quitar después de 2 segundos
-                return; // Detener la ejecución
-            }
-
-            if (!newName) { // Aunque la validación de longitud ya cubre esto si min es > 0
-                editNameStatus.textContent = "El nombre no puede estar vacío.";
                 editNameStatus.className = 'message-area error visible';
                 editNameStatus.style.display = 'block';
                 editNameInput.classList.add('input-error-pulse');
                 editNameInput.focus();
-                setTimeout(() => editNameInput.classList.remove('input-error-pulse'), 2000);
+                setTimeout(() => { editNameInput.classList.remove('input-error-pulse'); }, 2000);
                 return;
             }
+            // (Puedes añadir otra validación para newName vacío si quieres, aunque la de longitud lo cubre si min > 0)
 
             if (currentUserData && newName === currentUserData.pushname) {
-                toggleNameEditMode(false); // No hay cambios, simplemente cerrar
+                toggleNameEditMode(false);
                 return;
             }
 
             saveNameButton.disabled = true;
             saveNameButton.textContent = 'Guardando...';
             editNameStatus.textContent = 'Guardando nombre...';
-            editNameStatus.className = 'message-area visible'; // Mostrar mensaje de "Guardando"
-            // editNameStatus.classList.remove('success', 'error'); // Ya se hizo al inicio
+            editNameStatus.className = 'message-area visible'; // Mostrar mensaje
+            editNameStatus.classList.remove('success', 'error');
+
 
             try {
                 const response = await fetch(`${API_BASE_URL}/user/update-name`, {
@@ -310,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 editNameStatus.textContent = result.message;
-                editNameStatus.classList.add('success'); // Marcar como éxito
+                editNameStatus.classList.add('success');
 
                 if (currentUserData) {
                     currentUserData.pushname = newName;
@@ -318,17 +304,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (window.updateGlobalUserUI) {
                         window.updateGlobalUserUI(currentUserData);
                     }
-                    displayUserProfileData(currentUserData);
+                    displayUserProfileData(currentUserData); // Actualiza H1 y otros elementos del perfil
                 }
-                setTimeout(() => toggleNameEditMode(false), 1500);
+                
+                // Revertir estado del botón ANTES de ocultar el contenedor con toggleNameEditMode
+                saveNameButton.disabled = false;
+                saveNameButton.textContent = 'Guardar';
+
+                setTimeout(() => {
+                    toggleNameEditMode(false); // Ahora esto solo se encarga de la visibilidad
+                }, 1500); // Retraso para que el usuario vea el mensaje de éxito
 
             } catch (error) {
                 console.error("Error actualizando nombre:", error);
                 editNameStatus.textContent = `Error: ${error.message}`;
-                editNameStatus.classList.add('error'); // Marcar como error
-                saveNameButton.disabled = false; // Re-habilitar para reintentar
+                editNameStatus.classList.add('error');
+                
+                // REVERTIR ESTADO DEL BOTÓN EN CASO DE ERROR
+                saveNameButton.disabled = false;
                 saveNameButton.textContent = 'Guardar';
             } 
+            // No se necesita un 'finally' aquí si ambos caminos (try y catch)
+            // manejan explícitamente el estado del botón.
         });
     }
     
@@ -378,11 +375,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayFullUserDetails(user) {
         if (userFullDetailsDiv) {
+            console.log("Datos para displayFullUserDetails:", user); // LOG GENERAL DEL USUARIO
+            console.log("Valor de user.lastdaily:", user.lastdaily, "| Tipo:", typeof user.lastdaily);
+            console.log("Valor de user.lastwork:", user.lastwork, "| Tipo:", typeof user.lastwork);
+            // Y así para cualquier otro campo de fecha que dé problemas
+    
             let detailsHTML = `<h4>Más sobre ${escapeHtml(user.pushname)}:</h4>`;
             detailsHTML += `<p><strong>ID:</strong> ${escapeHtml(user.userId)}</p>`;
-            detailsHTML += `<p><strong>Últ. Daily:</strong> ${formatTimestamp(user.lastdaily)}</p>`;
+            detailsHTML += `<p><strong>Últ. Daily:</strong> ${formatTimestamp(user.lastdaily)}</p>`; // Aquí se usa
             detailsHTML += `<p><strong>Racha Daily:</strong> ${user.dailystreak || 0} día(s)</p>`;
-            detailsHTML += `<p><strong>Últ. Trabajo:</strong> ${formatTimestamp(user.lastwork)}</p>`;
+            detailsHTML += `<p><strong>Últ. Trabajo:</strong> ${formatTimestamp(user.lastwork)}</p>`; // Y aquí
             // ... más detalles ...
             userFullDetailsDiv.innerHTML = detailsHTML;
             userFullDetailsDiv.classList.add('visible');
@@ -516,13 +518,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loggedInUserId) {
                 if (loggedInUserId === userInList.userId) { /* No action for self */ }
                 else if (tabType === 'following' && userIdForModalList === loggedInUserId) {
-                    actionButtonHtml = `<button class="follow-action-btn button-unfollow" data-action="unfollow" data-target-userid="${userInList.userId}">Dejar de seguir</button>`;
+                    actionButtonHtml = `<button class="follow-action-btn button-unfollow" data-action="unfollow" data-target-userId="${userInList.userId}">Dejar de seguir</button>`;
                 } else if (tabType === 'followers' && userIdForModalList === loggedInUserId) {
-                    actionButtonHtml = `<button class="follow-action-btn button-remove-follower" data-action="remove-follower" data-target-userid="${userInList.userId}">Eliminar</button>`;
+                    actionButtonHtml = `<button class="follow-action-btn button-remove-follower" data-action="remove-follower" data-target-userId="${userInList.userId}">Eliminar</button>`;
                 } else if (userIdForModalList !== loggedInUserId) {
                     actionButtonHtml = userInList.isFollowedByViewer ?
-                        `<button class="follow-action-btn button-unfollow" data-action="unfollow" data-target-userid="${userInList.userId}">Dejar de seguir</button>` :
-                        `<button class="follow-action-btn button-follow" data-action="follow" data-target-userid="${userInList.userId}">Seguir</button>`;
+                        `<button class="follow-action-btn button-unfollow" data-action="unfollow" data-target-userId="${userInList.userId}">Dejar de seguir</button>` :
+                        `<button class="follow-action-btn button-follow" data-action="follow" data-target-userId="${userInList.userId}">Seguir</button>`;
                 }
             }
             li.innerHTML = `
@@ -702,8 +704,56 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Funciones Auxiliares ---
     function escapeHtml(unsafe) { if (unsafe === null || typeof unsafe === 'undefined') return ''; return String(unsafe).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, ".").replace(/'/g, "'"); }
-    function formatTimestamp(timestamp) { if (!timestamp || timestamp === 0) return 'Nunca'; try { return new Date(timestamp).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return 'Fecha inválida'; } }
-
+    function formatTimestamp(timestamp) {
+        console.log("[formatTimestamp] Valor de entrada:", timestamp, "| Tipo:", typeof timestamp); // Log inicial
+    
+        if (timestamp === null || timestamp === undefined || timestamp === 0 || timestamp === '') {
+            console.log("[formatTimestamp] Devolviendo 'Nunca' por valor nulo/vacío/cero.");
+            return 'Nunca';
+        }
+    
+        let dateObj;
+    
+        if (typeof timestamp === 'number') {
+            console.log("[formatTimestamp] Es tipo número.");
+            dateObj = new Date(timestamp);
+        } 
+        else if (typeof timestamp === 'string') {
+            console.log("[formatTimestamp] Es tipo string.");
+            const numericTimestamp = Number(timestamp);
+            console.log("[formatTimestamp] String convertida a número:", numericTimestamp, "| es NaN?:", isNaN(numericTimestamp));
+    
+            if (!isNaN(numericTimestamp) && String(numericTimestamp) === timestamp.trim()) { // Añadido .trim() por si acaso
+                console.log("[formatTimestamp] Es una cadena numérica válida. Usando el valor numérico.");
+                dateObj = new Date(numericTimestamp);
+            } else {
+                console.log("[formatTimestamp] No es una cadena puramente numérica o la conversión falló. Intentando parsear string directamente.");
+                dateObj = new Date(timestamp);
+            }
+        } 
+        else {
+            console.warn("[formatTimestamp] Tipo de timestamp no reconocido:", timestamp, typeof timestamp);
+            return 'Fecha no válida (tipo)';
+        }
+    
+        console.log("[formatTimestamp] Objeto Date antes de chequeo de validez:", dateObj);
+    
+        if (!dateObj || isNaN(dateObj.getTime())) { // Añadido chequeo por si dateObj es undefined
+            console.warn("[formatTimestamp] El valor resultó en 'Invalid Date'. Original:", timestamp, "| dateObj:", dateObj);
+            return 'Fecha inválida';
+        }
+    
+        console.log("[formatTimestamp] Fecha válida. Formateando:", dateObj);
+        try {
+            return dateObj.toLocaleString('es-ES', { 
+                day: '2-digit', month: '2-digit', year: 'numeric', 
+                hour: '2-digit', minute: '2-digit',
+            });
+        } catch (e) {
+            console.error("[formatTimestamp] Error formateando la fecha:", e, dateObj);
+            return 'Error al formatear';
+        }
+    }
     // --- INICIAR LA PÁGINA ---
     initializeProfilePage();
 });

@@ -1,11 +1,9 @@
 // routes/auth.js
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
-const path = require('path');
+const db = require('../db'); 
 
 const router = express.Router();
-const DB_PATH = path.join(__dirname, '..', 'bot_database.sqlite'); // Ajustar ruta para salir de 'routes' y luego a la raíz
 
 router.post('/login', async (req, res) => {
     const { phoneNumber, password } = req.body;
@@ -15,53 +13,42 @@ router.post('/login', async (req, res) => {
     }
     const phoneNumberClean = String(phoneNumber).startsWith('+') ? String(phoneNumber).substring(1) : String(phoneNumber);
 
-    const db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READONLY, (errDb) => {
-        if (errDb) {
-            console.error("[API Auth Login] Error al conectar a la BD:", errDb.message);
-            return res.status(500).json({ message: "Error interno del servidor." }); // Cambiado 'error' a 'message' por consistencia
-        }
-    });
+    const sql = `
+        SELECT 
+            "userId",           -- Asumiendo que 'userId' fue creado con 'I' mayúscula (o entre comillas)
+            pushname,           -- Asumiendo que 'pushname' es todo minúsculas en la BD
+            password AS "hashedPassword", -- 'password' es palabra clave, AS es bueno. O usa "password" si es el nombre exacto.
+            exp,
+            money,
+            bank,
+            "profilePhotoPath", -- Asumiendo que tiene mayúsculas en la BD
+            "coverPhotoPath"    -- Asumiendo que tiene mayúsculas en la BD
+        FROM users 
+        WHERE "phoneNumber" = $1 -- Asumiendo que 'phoneNumber' tiene mayúsculas en la BD
+    `;
 
-     // MODIFICADO: Seleccionar todos los campos necesarios, incluyendo las rutas de las imágenes
-     const sql = `
-     SELECT 
-         userId, 
-         pushname, 
-         password as hashedPassword, 
-         exp, 
-         money, 
-         bank, 
-         profilePhotoPath,  -- Añadido
-         coverPhotoPath     -- Añadido
-     FROM users 
-     WHERE phoneNumber = ?
- `;
-    db.get(sql, [phoneNumberClean], async (errQuery, userRow) => {
-        //db.close();
-        if (errQuery) {
-            db.close(); // Asegurarse de cerrar en caso de error
-            console.error("[API Auth Login] Error en query:", errQuery.message);
-            return res.status(500).json({ error: "Error consultando la base de datos." });
-        }
-        if (!userRow) {
+    try {
+        const result = await db.query(sql, [phoneNumberClean]);
+
+        if (result.rows.length === 0) {
             return res.status(401).json({ message: "Número de teléfono o contraseña incorrectos." });
         }
-        try {
-            const isMatch = await bcrypt.compare(password, userRow.hashedPassword);
-            if (isMatch) {
-                const { hashedPassword, ...userDataToSend } = userRow;
-                db.close(); // Cerrar BD después de la operación exitosa
-                res.json({ message: "Inicio de sesión exitoso", user: userDataToSend });
-            } else {
-                db.close();
-                res.status(401).json({ message: "Número de teléfono o contraseña incorrectos." });
-            }
-        } catch (bcryptError) {
-            db.close();
-            console.error("[API Auth Login] Error en bcrypt:", bcryptError);
-            res.status(500).json({ error: "Error interno del servidor durante la autenticación." });
+
+        const userRow = result.rows[0];
+
+        // userRow.hashedPassword debe coincidir con el alias usado en el SELECT
+        const isMatch = await bcrypt.compare(password, userRow.hashedPassword); 
+        
+        if (isMatch) {
+            const { hashedPassword, ...userDataToSend } = userRow; 
+            res.json({ message: "Inicio de sesión exitoso", user: userDataToSend });
+        } else {
+            res.status(401).json({ message: "Número de teléfono o contraseña incorrectos." });
         }
-    });
+    } catch (error) {
+        console.error("[API Auth Login] Error durante el proceso de login:", error.message, error.stack);
+        res.status(500).json({ message: "Error interno del servidor durante el login." });
+    }
 });
 
-module.exports = router; // Exportar el router
+module.exports = router;
