@@ -44,6 +44,25 @@ app.get(['/', '/juegos.html', '/profile.html', '/search-results.html'], (req, re
     // Por ahora, dejaremos que express.static maneje /juegos.html, etc.
 });
 
+// Health Check Endpoint para Render
+app.get('/healthz', (req, res) => {
+    // Puedes añadir lógica aquí para verificar dependencias críticas si es necesario
+    // (ej. una query simple a la base de datos para asegurar que la conexión está viva)
+    // Por ahora, una respuesta simple 200 OK es suficiente para que Render sepa que la app está corriendo.
+    console.log("Health check /healthz endpoint hit"); // Log para ver si se llama
+    res.status(200).send('OK');
+});
+
+// Ruta raíz (si no la tienes ya o si express.static no es suficiente para el health check inicial)
+// A veces Render intenta '/' para el health check si '/healthz' no está configurado explícitamente o falla.
+app.get('/', (req, res) => {
+    // Servir tu index.html o simplemente un OK para la raíz si es solo para health check.
+    // Si express.static ya sirve index.html en '/', esto podría no ser necesario,
+    // pero tener una ruta explícita para '/' que devuelva 200 no hace daño.
+    // res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.status(200).send('Aplicación funcionando!'); // O servir tu index.html
+});
+
 
 // --- Iniciar el Servidor ---
 app.listen(PORT, () => {
