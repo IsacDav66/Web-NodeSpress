@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registros del Script - Estadísticas del Bot</title>
+    <link rel="stylesheet" href="style.css"> <!-- Reutilizamos el mismo estilo -->
+</head>
+
+<body>
+    <div class="page-overlay" id="pageOverlay"></div>
+    <header>
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <div class="header-search-container" id="headerSearchContainer" style="display: none;">
+            <input type="text" id="headerUserIdInput" placeholder="Buscar usuario...">
+            <button id="headerSearchUserButton" class="search-icon-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px"
+                    height="20px">
+                    <path
+                        d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                </svg>
+            </button>
+        </div>
+        <div id="userInfoArea" class="user-info-header" style="display: none;">
+            <span id="loggedInUserName"></span>
+        </div>
+    </header>
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header-controls">
+                <button id="sidebarLogoutButton" class="sidebar-logout-btn" title="Cerrar Sesión"
+                    style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px"
+                        height="22px">
+                        <path d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="sidebar-profile" id="sidebarProfileInfo" style="display: none;">
+                <img src="placeholder-profile.jpg" alt="Foto de perfil" id="sidebarProfilePic" class="profile-pic">
+                <span id="sidebarProfileName" class="profile-name">Usuario</span>
+            </div>
+            <ul>
+                <li><a href="index.html">📊 Estadísticas</a></li>
+                <li><a href="juegos.html">🎲 Juegos</a></li>
+                <li>
+                    <a href="registros.html" class="active"> <!-- Marcar como activo en esta página -->
+                        <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                            fill="currentColor" width="18px" height="18px"
+                            style="margin-right: 8px; vertical-align: middle;">
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12z" />
+                        </svg>
+                        Publicacion del Grupo
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <main class="content">
+            <h1>
+                <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                    width="28px" height="28px" style="margin-right: 10px; vertical-align: -7px;">
+                    <path d="M0 0h24v24H0z" fill="none" />
+                    <path
+                        d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12z" />
+                </svg>
+                Historial de Publicacion del Grupo
+            </h1>
+
+            <section id="script-logs-section">
+                <div class="data-list">
+                    <table id="logsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Hora de Inicio</th>
+                                <th>Estado Inicio</th>
+                                <th>Hora de Finalización</th>
+                                <th>Estado Final</th>
+                                <th>Detalles</th> <!-- Cambiado de "Detalles del Error" a solo "Detalles" -->
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align:center; padding: 20px;">Cargando registros...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="paginationControls" class="pagination-controls" style="text-align: center; margin-top: 20px;">
+                    <!-- Los botones de paginación se insertarán aquí por JavaScript -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!--
+        Incluye tu script.js principal que maneja la lógica común (sidebar, login/logout, etc.)
+        Si `registros.html` tiene mucha lógica específica, podrías crear un `registros.js`
+        y también incluirlo, o poner toda la lógica aquí abajo.
+    -->
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // El script.js principal debería manejar la lógica de autenticación y UI global.
+            // Esta página asumirá que script.js ya ha verificado si el usuario está logueado
+            // y ha mostrado el contenido principal o la sección de login según corresponda.
+
+            // Marcar el enlace activo del sidebar (si script.js no lo hace de forma genérica)
+            const currentPath = window.location.pathname.split("/").pop() || "registros.html"; // Default si es la raíz
+            document.querySelectorAll('.sidebar ul li a').forEach(link => {
+                link.classList.remove('active');
+                const linkPath = link.getAttribute('href').split("/").pop();
+                if (linkPath === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+
+            fetchScriptLogs(); // Cargar los logs del script
+        });
+
+        async function fetchScriptLogs() {
+            const tbody = document.getElementById('logsTableBody');
+            if (!tbody) {
+                console.error("Elemento logsTableBody no encontrado.");
+                return;
+            }
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">Cargando registros...</td></tr>';
+
+            try {
+                const response = await fetch('/api/logs/script-executions'); // Endpoint del backend
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: `Error HTTP ${response.status}` }));
+                    throw new Error(errorData.message || `Error HTTP ${response.status}`);
+                }
+                const logs = await response.json();
+
+                if (logs && logs.length > 0) {
+                    tbody.innerHTML = ''; // Limpiar mensaje de carga
+                    logs.forEach(log => {
+                        const row = tbody.insertRow();
+                        row.insertCell().textContent = log.id;
+                        // Usar los alias camelCase devueltos por el backend
+                        row.insertCell().textContent = log.startTime ? new Date(log.startTime).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' }) : 'N/A';
+                        row.insertCell().textContent = log.startStatus || 'N/A';
+                        row.insertCell().textContent = log.endTime ? new Date(log.endTime).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' }) : 'N/A';
+                        row.insertCell().textContent = log.endStatus || 'N/A';
+
+                        const detailsCell = row.insertCell();
+                        detailsCell.textContent = log.errorDetails || '-';
+                        // Aplicar estilo si es un error
+                        if (log.startStatus && log.startStatus.toLowerCase().includes('fallo')) {
+                            row.cells[2].style.color = 'var(--error-color)'; // Columna Estado Inicio
+                            row.cells[2].style.fontWeight = 'bold';
+                        }
+                        if (log.endStatus && log.endStatus.toLowerCase().includes('fallo')) {
+                            row.cells[4].style.color = 'var(--error-color)'; // Columna Estado Final
+                            row.cells[4].style.fontWeight = 'bold';
+                            detailsCell.style.color = 'var(--error-color)'; // Columna Detalles
+                        }
+                        if (log.errorDetails) {
+                            detailsCell.classList.add('error-details-cell'); // Puedes definir esta clase en CSS si quieres más estilos
+                        }
+
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">No hay registros para mostrar.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error al cargar los registros del script:', error);
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: var(--error-color);">Error al cargar los registros: ${error.message}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

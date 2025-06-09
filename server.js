@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 3000;
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const gameRoutes = require('./routes/games');
+const logRoutes = require('./routes/logs'); // <--- AÑADIR ESTA LÍNEA
 
 // Middleware
 app.use(cors());
@@ -30,10 +31,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use('/api', authRoutes);        // Para /api/login
 app.use('/api/user', userRoutes);  // Para /api/user/*
 app.use('/api/games', gameRoutes);  // Para /api/games/*
+app.use('/api/logs', logRoutes); // <--- AÑADIR ESTA LÍNEA (MOLDE: /api/logs/script-executions)
 
 // Ruta raíz para servir el index.html (manejada por express.static)
 // Si quieres ser explícito o tener un fallback para SPA:
-app.get(['/', '/juegos.html', '/profile.html', '/search-results.html'], (req, res) => {
+app.get(['/', '/juegos.html', '/profile.html', '/search-results.html', '/registros.html'], (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html')); 
     // Para una SPA real, todas las rutas del frontend no API deberían servir index.html
     // y dejar que el enrutador del frontend maneje la vista.

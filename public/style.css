@@ -441,3 +441,23 @@ h1#userProfileName.profile-main-name.editable-name:hover {
     visibility: visible;
     transition-delay: 0s; /* Para que visibility cambie al inicio de la opacidad cuando se muestra */
 }
+
+
+
+
+
+.sidebar ul li a .sidebar-icon {
+    fill: currentColor; /* Hereda el color del texto del enlace 'a' */
+    transition: fill var(--transition-speed-fast) var(--easing-smooth); /* Para transiciones de color suaves */
+    /* Ajusta el tamaño aquí si el width/height inline no es suficiente o quieres un control centralizado */
+}
+
+/* Opcional: Si quieres que el ícono también cambie de color específicamente en el estado :hover o .active del 'a' */
+/* Esto ya debería funcionar debido a 'fill: currentColor', pero por si acaso o para más control: */
+.sidebar ul li a:hover .sidebar-icon {
+    /* fill: var(--dark-text); ya debería serlo por currentColor */
+}
+
+.sidebar ul li a.active .sidebar-icon {
+    /* fill: white; ya debería serlo por currentColor */
+}

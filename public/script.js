@@ -3,9 +3,8 @@
 // --- FUNCIONES AUXILIARES GLOBALES ---
 function escapeHtmlForGlobalUI(unsafe) {
     if (unsafe === null || typeof unsafe === 'undefined') return '';
-    // CORREGIDO: Usar las entidades HTML correctas
     return String(unsafe)
-         .replace(/&/g, "&")
+         .replace(/&/g, "&") // Corregido para entidades HTML correctas
          .replace(/</g, "<")
          .replace(/>/g, ">")
          .replace(/"/g, ".")
@@ -14,6 +13,10 @@ function escapeHtmlForGlobalUI(unsafe) {
 
 // --- FUNCIÓN GLOBAL PARA ACTUALIZAR LA UI DEL USUARIO (SIDEBAR, HEADER) ---
 window.updateGlobalUserUI = function(userDataObject) {
+    const pagePath = window.location.pathname;
+    // Loguear una copia para evitar problemas si el objeto se modifica después
+    console.log(`[updateGlobalUserUI en ${pagePath}] Llamada con userDataObject:`, userDataObject ? JSON.parse(JSON.stringify(userDataObject)) : null);
+
     const sidebarProfileInfoDiv = document.getElementById('sidebarProfileInfo');
     const sidebarProfilePicImg = document.getElementById('sidebarProfilePic');
     const sidebarProfileNameSpan = document.getElementById('sidebarProfileName');
@@ -25,9 +28,16 @@ window.updateGlobalUserUI = function(userDataObject) {
     if (userDataObject && userDataObject.userId) {
         if (sidebarProfileInfoDiv) sidebarProfileInfoDiv.style.display = 'flex';
         if (sidebarProfilePicImg) {
-            // Usar la ruta correcta y el placeholder consistente
-            sidebarProfilePicImg.src = userDataObject.profilePhotoPath ? `/${userDataObject.profilePhotoPath}` : 'placeholder-profile.jpg'; 
+            // La ruta ya debería venir con ?v=... de localStorage si se actualizó la imagen
+            // El prefijo '/' es importante si profilePhotoPath no lo incluye.
+            const newSrc = userDataObject.profilePhotoPath
+                ? (userDataObject.profilePhotoPath.startsWith('/') ? userDataObject.profilePhotoPath : `/${userDataObject.profilePhotoPath}`)
+                : 'placeholder-profile.jpg';
+
+            console.log(`[updateGlobalUserUI en ${pagePath}] Intentando establecer src de sidebarProfilePicImg a: ${newSrc}`);
+            sidebarProfilePicImg.src = newSrc;
             sidebarProfilePicImg.alt = `Foto de ${escapeHtmlForGlobalUI(userDataObject.pushname) || 'Usuario'}`;
+            console.log(`[updateGlobalUserUI en ${pagePath}] src de sidebarProfilePicImg DESPUÉS de setear: ${sidebarProfilePicImg.src}`);
         }
         if (sidebarProfileNameSpan) {
             sidebarProfileNameSpan.textContent = escapeHtmlForGlobalUI(userDataObject.pushname) || 'Usuario';
@@ -39,8 +49,13 @@ window.updateGlobalUserUI = function(userDataObject) {
         if (sidebarLogoutButtonGlobal) sidebarLogoutButtonGlobal.style.display = 'flex';
         if (headerSearchContainerGlobal) headerSearchContainerGlobal.style.display = 'flex';
     } else {
+        // Lógica para cuando no hay usuario (logout o carga inicial sin sesión)
         if (sidebarProfileInfoDiv) sidebarProfileInfoDiv.style.display = 'none';
-        if (sidebarProfilePicImg) sidebarProfilePicImg.src = 'placeholder-profile.jpg'; // Placeholder consistente
+        if (sidebarProfilePicImg) {
+            console.log(`[updateGlobalUserUI en ${pagePath}] Seteando sidebarProfilePicImg a placeholder (no userDataObject).`);
+            sidebarProfilePicImg.src = 'placeholder-profile.jpg';
+            sidebarProfilePicImg.alt = 'Foto de perfil';
+        }
         if (sidebarProfileNameSpan) sidebarProfileNameSpan.textContent = 'Usuario';
         if (loggedInUserNameSpanHeader) loggedInUserNameSpanHeader.textContent = '';
         if (userInfoAreaHeader) userInfoAreaHeader.style.display = 'none';
@@ -49,28 +64,37 @@ window.updateGlobalUserUI = function(userDataObject) {
     }
 };
 
-// --- LISTENER PARA EL EVENTO 'storage' ---
+// --- LISTENER PARA EL EVENTO 'storage' (CAMBIOS EN LOCALSTORAGE DESDE OTRAS PESTAÑAS) ---
 window.addEventListener('storage', function(event) {
     if (event.key === 'loggedInUser') {
-        // console.log('Evento storage detectado para loggedInUser:', event.key); // Descomentar para depurar
-        if (event.newValue) {
+        const pagePath = window.location.pathname;
+        // Loguear solo una parte del string si es muy largo
+        const newV = event.newValue ? (event.newValue.length > 150 ? event.newValue.substring(0, 150) + '...' : event.newValue) : 'null';
+        const oldV = event.oldValue ? (event.oldValue.length > 150 ? event.oldValue.substring(0, 150) + '...' : event.oldValue) : 'null';
+        console.log(`[Storage Event en ${pagePath}] Clave: ${event.key}, Valor Nuevo: ${newV}, Valor Antiguo: ${oldV}`);
+
+        if (event.newValue) { // Se actualizó o se inició sesión en otra pestaña
             try {
-                const updatedUser = JSON.parse(event.newValue);
-                if (updatedUser && updatedUser.userId) {
-                    window.updateGlobalUserUI(updatedUser);
+                const updatedUserFromStorage = JSON.parse(event.newValue);
+                console.log(`[Storage Event en ${pagePath}] Usuario parseado de newValue:`, updatedUserFromStorage ? JSON.parse(JSON.stringify(updatedUserFromStorage)) : null);
+
+                if (updatedUserFromStorage && updatedUserFromStorage.userId) {
+                    console.log(`[Storage Event en ${pagePath}] Llamando a updateGlobalUserUI con profilePhotoPath: ${updatedUserFromStorage.profilePhotoPath}`);
+                    window.updateGlobalUserUI(updatedUserFromStorage);
                 } else {
-                     window.updateGlobalUserUI(null);
+                    console.warn(`[Storage Event en ${pagePath}] updatedUserFromStorage no es válido o no tiene userId. Llamando a updateGlobalUserUI con null.`);
+                    window.updateGlobalUserUI(null);
                 }
             } catch (e) {
-                console.error("Error procesando evento de storage (newValue):", e);
+                console.error(`[Storage Event en ${pagePath}] Error parseando newValue:`, e, event.newValue);
                 window.updateGlobalUserUI(null);
             }
-        } else {
-            // console.log('loggedInUser eliminado de localStorage (logout en otra pestaña).'); // Descomentar para depurar
+        } else { // loggedInUser fue eliminado de localStorage (logout en otra pestaña)
+            console.log(`[Storage Event en ${pagePath}] loggedInUser eliminado (logout en otra pestaña).`);
             window.updateGlobalUserUI(null);
+            // Mostrar sección de login si estamos en una página que la tenga
             const loginSect = document.getElementById('login-section');
             const mainCont = document.getElementById('main-content');
-            // Asegurar que estos elementos existan antes de intentar modificar su estilo
             if (loginSect) loginSect.style.display = 'block';
             if (mainCont) mainCont.style.display = 'none';
         }
@@ -82,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_BASE_URL = '/api';
     const FRONTEND_MONEY_SYMBOL = '💰';
 
+    // --- Obtención de Elementos del DOM ---
     const loginSection = document.getElementById('login-section');
     const loginPhoneNumberInput = document.getElementById('loginPhoneNumber');
     const loginPasswordInput = document.getElementById('loginPassword');
@@ -89,72 +114,149 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginMessageDiv = document.getElementById('loginMessage');
     const mainContentDiv = document.getElementById('main-content');
     const millonariosListDiv = document.getElementById('millonariosList');
+    
     const headerUserIdInput = document.getElementById('headerUserIdInput');
     const headerSearchUserButton = document.getElementById('headerSearchUserButton');
     const sidebarProfileInfoDiv = document.getElementById('sidebarProfileInfo');
     const sidebarLogoutButton = document.getElementById('sidebarLogoutButton');
-    const userInfoArea = document.getElementById('userInfoArea');
-    const headerSearchContainer = document.getElementById('headerSearchContainer');
+
+    let loggedInUserObject = null; // Variable global en este script para el usuario actual
 
     function showLogin() {
+        const pagePath = window.location.pathname;
+        console.log(`[${pagePath}] showLogin: Mostrando sección de login.`);
+        loggedInUserObject = null; // Limpiar el objeto de usuario en memoria
         if (loginSection) loginSection.style.display = 'block';
         if (mainContentDiv) mainContentDiv.style.display = 'none';
-        window.updateGlobalUserUI(null);
-        localStorage.removeItem('loggedInUser');
-        if (userInfoArea) userInfoArea.style.display = 'none';
-        if (sidebarLogoutButton) sidebarLogoutButton.style.display = 'none';
-        if (headerSearchContainer) headerSearchContainer.style.display = 'none';
+        window.updateGlobalUserUI(null); // Actualiza header/sidebar a estado "no logueado"
+        localStorage.removeItem('loggedInUser'); // Asegurar que se limpie
     }
 
-    async function showMainContent(userObjectReceived) { 
-        if (!userObjectReceived || !userObjectReceived.userId) { 
-            console.error("showMainContent llamado sin datos de usuario válidos.");
+    async function showMainContent(userObjectReceived, fromLocalStorage = false) {
+        const pagePath = window.location.pathname;
+        console.log(`[${pagePath}] showMainContent para usuario:`, userObjectReceived ? JSON.parse(JSON.stringify(userObjectReceived)) : null, `Desde localStorage: ${fromLocalStorage}`);
+        
+        if (!userObjectReceived || !userObjectReceived.userId) {
+            console.error(`[${pagePath}] showMainContent llamado sin datos de usuario válidos.`);
             showLogin();
             return;
         }
 
+        loggedInUserObject = userObjectReceived; // Actualizar la referencia en memoria
+
         if (loginSection) loginSection.style.display = 'none';
         if (mainContentDiv) mainContentDiv.style.display = 'block';
         
-        window.updateGlobalUserUI(userObjectReceived); 
+        window.updateGlobalUserUI(loggedInUserObject);
         
-        localStorage.setItem('loggedInUser', JSON.stringify(userObjectReceived));
+        // Solo actualizamos localStorage si los datos NO vienen de localStorage
+        // o si vienen del login (que son los más frescos en ese momento).
+        // Si fromLocalStorage es true, ya están en localStorage.
+        // Si es una actualización de fetchAndUpdateCurrentUser, esa función se encargará de actualizar localStorage si es necesario.
+        if (!fromLocalStorage) {
+             console.log(`[${pagePath}] Actualizando localStorage en showMainContent con:`, JSON.parse(JSON.stringify(loggedInUserObject)));
+             localStorage.setItem('loggedInUser', JSON.stringify(loggedInUserObject));
+        }
 
-        if (millonariosListDiv) {
-            await loadMillonarios();
+
+        // Lógica específica de la página
+        if (pagePath.endsWith('/') || pagePath.endsWith('index.html')) {
+            if (millonariosListDiv) {
+                await loadMillonarios();
+            }
         }
     }
 
-    const storedUserString = localStorage.getItem('loggedInUser');
-    if (storedUserString) {
+    async function fetchAndUpdateCurrentUser(userIdToFetch) {
+        const pagePath = window.location.pathname;
+        console.log(`[${pagePath}] fetchAndUpdateCurrentUser para userId: ${userIdToFetch}`);
         try {
-            const parsedUser = JSON.parse(storedUserString);
-            if (parsedUser && parsedUser.userId) {
-                showMainContent(parsedUser);
+            const response = await fetch(`${API_BASE_URL}/user/${encodeURIComponent(userIdToFetch)}`);
+            if (!response.ok) {
+                console.warn(`[${pagePath}] Error al refrescar datos del usuario ${userIdToFetch}. Estado: ${response.status}`);
+                if (response.status === 401 || response.status === 404) {
+                    showLogin(); // Forzar logout si el usuario ya no es válido o no autorizado
+                }
+                return; // No se pudo refrescar
+            }
+            const freshUserData = await response.json();
+            if (freshUserData && freshUserData.userId) {
+                console.log(`[${pagePath}] Datos frescos recibidos para ${userIdToFetch}:`, JSON.parse(JSON.stringify(freshUserData)));
+                
+                // Comprobar si el usuario actual en memoria (loggedInUserObject) es el mismo y si los datos han cambiado.
+                // Si loggedInUserObject es null (primera carga, por ejemplo), o si los datos difieren.
+                let needsUIUpdate = true; // Asumir que se necesita actualizar por defecto
+                if (loggedInUserObject && loggedInUserObject.userId === freshUserData.userId) {
+                    if (loggedInUserObject.profilePhotoPath === freshUserData.profilePhotoPath &&
+                        loggedInUserObject.pushname === freshUserData.pushname) {
+                        // No hay cambios visuales significativos, pero actualizamos el objeto y localStorage para otros campos
+                        console.log(`[${pagePath}] Datos del usuario no cambiaron visualmente (foto, nombre). Actualizando otros campos si es necesario.`);
+                        needsUIUpdate = false; // No es necesario un re-renderizado completo de la UI principal por showMainContent
+                    }
+                }
+
+                // Actualizar el objeto en memoria y localStorage con los datos más frescos
+                loggedInUserObject = freshUserData;
+                localStorage.setItem('loggedInUser', JSON.stringify(loggedInUserObject));
+                console.log(`[${pagePath}] localStorage actualizado por fetchAndUpdateCurrentUser.`);
+
+
+                if (needsUIUpdate) {
+                    console.log(`[${pagePath}] Datos del usuario cambiaron. Llamando a updateGlobalUserUI con datos frescos.`);
+                    window.updateGlobalUserUI(loggedInUserObject); // Actualiza solo el sidebar/header
+                    // Si estás en una página que muestra más detalles (como index con millonarios),
+                    // podrías necesitar recargar esa sección específica aquí también.
+                    // Por ahora, showMainContent (que llama a updateGlobalUserUI) se encarga de la UI global.
+                    // Si la llamada original a showMainContent ya renderizó la página con datos de localStorage,
+                    // esta llamada a updateGlobalUserUI es suficiente para el sidebar/header.
+                }
             } else {
-                console.warn("Datos de usuario en localStorage no válidos al cargar página.");
+                 console.warn(`[${pagePath}] fetchAndUpdateCurrentUser: No se recibieron datos válidos para el usuario ${userIdToFetch}.`);
+            }
+        } catch (error) {
+            console.error(`[${pagePath}] Excepción al refrescar datos del usuario ${userIdToFetch}:`, error);
+        }
+    }
+
+    // --- Lógica de Inicialización de UI al Cargar la Página ---
+    const storedUserStringOnLoad = localStorage.getItem('loggedInUser');
+    if (storedUserStringOnLoad) {
+        try {
+            const parsedUserOnLoad = JSON.parse(storedUserStringOnLoad);
+            if (parsedUserOnLoad && parsedUserOnLoad.userId) {
+                const pagePath = window.location.pathname;
+                console.log(`[${pagePath}] Usuario encontrado en localStorage al cargar. Mostrando UI con datos cacheados y refrescando en segundo plano:`, JSON.parse(JSON.stringify(parsedUserOnLoad)));
+                showMainContent(parsedUserOnLoad, true); // Mostrar UI con datos cacheados, fromLocalStorage = true
+                fetchAndUpdateCurrentUser(parsedUserOnLoad.userId); // Luego, intentar refrescar desde el servidor
+            } else {
+                console.warn(`[${window.location.pathname}] Datos de usuario en localStorage no válidos al cargar.`);
                 showLogin();
             }
         } catch (e) {
-            console.error("Error parseando storedUser al cargar página:", e);
+            console.error(`[${window.location.pathname}] Error parseando storedUser al cargar:`, e);
             showLogin();
         }
     } else {
+        console.log(`[${window.location.pathname}] No hay usuario en localStorage al cargar, mostrando login.`);
         showLogin();
     }
 
+    // --- Event Listeners ---
     if (loginButton) {
         loginButton.addEventListener('click', async () => {
             const phoneNumber = loginPhoneNumberInput.value.trim();
             const password = loginPasswordInput.value.trim();
+            const pagePath = window.location.pathname;
+
+            loginMessageDiv.className = 'message-area';
             if (!phoneNumber || !password) {
                 loginMessageDiv.textContent = 'Por favor, ingresa número y contraseña.';
-                loginMessageDiv.className = 'message-area error visible';
+                loginMessageDiv.classList.add('error', 'visible');
                 return;
             }
             loginMessageDiv.textContent = 'Iniciando sesión...';
-            loginMessageDiv.className = 'message-area visible'; // Quitar 'success' o 'error' aquí
-            loginMessageDiv.classList.remove('success', 'error'); 
+            loginMessageDiv.classList.add('visible');
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/login`, {
                     method: 'POST',
@@ -163,46 +265,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await response.json();
                 if (response.ok && data.user) {
-                    loginMessageDiv.textContent = data.message;
-                    loginMessageDiv.classList.add('success'); // Añadir success aquí
-                    await showMainContent(data.user);
+                    loginMessageDiv.textContent = data.message || "Inicio de sesión exitoso.";
+                    loginMessageDiv.classList.add('success');
+                    console.log(`[${pagePath}] Login exitoso, llamando a showMainContent con:`, JSON.parse(JSON.stringify(data.user)));
+                    await showMainContent(data.user); // Esto setea loggedInUserObject y localStorage
                 } else {
                     loginMessageDiv.textContent = data.message || 'Error al iniciar sesión.';
-                    loginMessageDiv.classList.add('error'); // Añadir error aquí
+                    loginMessageDiv.classList.add('error');
                 }
             } catch (error) { 
-                console.error('Error en login:', error);
+                console.error('Error en fetch de login:', error);
                 loginMessageDiv.textContent = 'Error de conexión al intentar iniciar sesión.';
-                loginMessageDiv.className = 'message-area error visible'; // Asegurar .visible
+                loginMessageDiv.classList.add('error', 'visible');
             }
         });
     }
 
     if (sidebarLogoutButton) {
         sidebarLogoutButton.addEventListener('click', () => {
+            console.log(`[${window.location.pathname}] Botón de logout presionado.`);
             showLogin();
         });
     }
     
     if (sidebarProfileInfoDiv) {
         sidebarProfileInfoDiv.addEventListener('click', () => {
-            const currentPath = window.location.pathname.split('/').pop();
-            const urlParams = new URLSearchParams(window.location.search);
-            const queryUserId = urlParams.get('id');
-            let localLoggedInUserId = null;
-            const localStoredUser = localStorage.getItem('loggedInUser');
-            if(localStoredUser) {
-                try { localLoggedInUserId = JSON.parse(localStoredUser).userId; } catch(e) { console.error("Error parseando localLoggedInUser para click en sidebar", e);}
-            }
-
-            if (currentPath === 'profile.html' && (!queryUserId || queryUserId === localLoggedInUserId) && localLoggedInUserId) {
-                sidebarProfileInfoDiv.style.transform = 'scale(0.98)';
-                setTimeout(() => sidebarProfileInfoDiv.style.transform = 'scale(1)', 150);
+            console.log(`[${window.location.pathname}] Click en perfil del sidebar.`);
+            if (loggedInUserObject && loggedInUserObject.userId) { // Solo redirigir si hay un usuario
+                 window.location.href = 'profile.html'; // Siempre va al perfil propio del usuario logueado
             } else {
-                window.location.href = 'profile.html';
+                console.warn("Click en perfil del sidebar, pero no hay usuario logueado (loggedInUserObject es null).");
+                // Opcional: redirigir a login si no hay usuario logueado
+                // window.location.href = 'index.html'; // o la página de login
             }
         });
-        sidebarProfileInfoDiv.style.cursor = 'pointer';
     }
 
     async function loadMillonarios() {
@@ -311,35 +407,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const menuToggleButton = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar'); // Asegúrate que tu <nav> del sidebar tenga id="sidebar"
+    const sidebar = document.getElementById('sidebar');
     const pageOverlay = document.getElementById('pageOverlay');
 
     if (menuToggleButton && sidebar && pageOverlay) {
         menuToggleButton.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevenir que el clic se propague al body/document
+            event.stopPropagation();
             sidebar.classList.toggle('open');
             pageOverlay.classList.toggle('visible', sidebar.classList.contains('open'));
             document.body.classList.toggle('sidebar-open-no-scroll', sidebar.classList.contains('open'));
         });
 
-        pageOverlay.addEventListener('click', () => { // Listener para cerrar al hacer clic en el overlay
+        pageOverlay.addEventListener('click', () => {
             sidebar.classList.remove('open');
             pageOverlay.classList.remove('visible');
             document.body.classList.remove('sidebar-open-no-scroll');
         });
 
         sidebar.addEventListener('click', (event) => {
-            // Prevenir que los clics DENTRO del sidebar cierren el overlay si el clic se propaga al overlay.
-            // Esto es importante si el overlay estuviera de alguna forma "detrás" y el clic pudiera pasar.
-            // Sin embargo, el principal objetivo aquí es manejar los clics en los enlaces.
-            event.stopPropagation(); 
-            
-            const targetLink = event.target.closest('a'); // Buscar el ancestro <a> más cercano
-            // Cerrar el sidebar en mobile si se hace clic en un enlace de navegación principal
-            // (no en un submenú de juego, por ejemplo, si tuvieras esa lógica)
+            event.stopPropagation();
+            const targetLink = event.target.closest('a');
             if (window.innerWidth <= 768 && targetLink && !targetLink.hasAttribute('data-noclose')) {
-                // Si el enlace está en la lista principal de ul (no en #game-menu específicamente, o si quieres que todos cierren)
-                if (targetLink.closest('ul:not(#game-menu)')) { // Ejemplo: no cerrar para #game-menu
+                 if (targetLink.closest('ul:not(#game-menu)')) {
                     sidebar.classList.remove('open');
                     pageOverlay.classList.remove('visible');
                     document.body.classList.remove('sidebar-open-no-scroll');
@@ -347,6 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             if (sidebar && sidebar.classList.contains('open')) {
@@ -354,22 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(pageOverlay) pageOverlay.classList.remove('visible');
                 document.body.classList.remove('sidebar-open-no-scroll');
             }
-            // Cerrar otros modales si están abiertos
-            const followModal = document.getElementById('followListModal');
-            const imageModal = document.getElementById('imageEditModal');
-            if (followModal && followModal.classList.contains('visible')) {
-                // Asumiendo que tienes una función closeModal para este modal, similar a la de profile.js
-                // o llama a la lógica directamente:
-                followModal.classList.remove('visible');
-                document.body.classList.remove('modal-open-no-scroll'); // Si este modal también bloquea scroll
-                setTimeout(() => { if (!followModal.classList.contains('visible')) followModal.style.display = 'none'; }, 300);
-            }
-            if (imageModal && imageModal.classList.contains('visible')) {
-                imageModal.classList.remove('visible');
-                document.body.classList.remove('modal-open-no-scroll');
-                setTimeout(() => { if (!imageModal.classList.contains('visible')) imageModal.style.display = 'none'; }, 300);
-            }
+            // No manejamos otros modales aquí ya que son específicos de otras páginas (profile.js)
         }
     });
-
 });
