@@ -14,7 +14,6 @@ function escapeHtmlForGlobalUI(unsafe) {
 // --- FUNCIÓN GLOBAL PARA ACTUALIZAR LA UI DEL USUARIO (SIDEBAR, HEADER) ---
 window.updateGlobalUserUI = function(userDataObject) {
     const pagePath = window.location.pathname;
-    // Loguear una copia para evitar problemas si el objeto se modifica después
     console.log(`[updateGlobalUserUI en ${pagePath}] Llamada con userDataObject:`, userDataObject ? JSON.parse(JSON.stringify(userDataObject)) : null);
 
     const sidebarProfileInfoDiv = document.getElementById('sidebarProfileInfo');
@@ -28,16 +27,11 @@ window.updateGlobalUserUI = function(userDataObject) {
     if (userDataObject && userDataObject.userId) {
         if (sidebarProfileInfoDiv) sidebarProfileInfoDiv.style.display = 'flex';
         if (sidebarProfilePicImg) {
-            // La ruta ya debería venir con ?v=... de localStorage si se actualizó la imagen
-            // El prefijo '/' es importante si profilePhotoPath no lo incluye.
             const newSrc = userDataObject.profilePhotoPath
                 ? (userDataObject.profilePhotoPath.startsWith('/') ? userDataObject.profilePhotoPath : `/${userDataObject.profilePhotoPath}`)
                 : 'placeholder-profile.jpg';
-
-            console.log(`[updateGlobalUserUI en ${pagePath}] Intentando establecer src de sidebarProfilePicImg a: ${newSrc}`);
             sidebarProfilePicImg.src = newSrc;
             sidebarProfilePicImg.alt = `Foto de ${escapeHtmlForGlobalUI(userDataObject.pushname) || 'Usuario'}`;
-            console.log(`[updateGlobalUserUI en ${pagePath}] src de sidebarProfilePicImg DESPUÉS de setear: ${sidebarProfilePicImg.src}`);
         }
         if (sidebarProfileNameSpan) {
             sidebarProfileNameSpan.textContent = escapeHtmlForGlobalUI(userDataObject.pushname) || 'Usuario';
@@ -46,21 +40,19 @@ window.updateGlobalUserUI = function(userDataObject) {
              loggedInUserNameSpanHeader.textContent = `${escapeHtmlForGlobalUI(userDataObject.pushname) || 'Usuario'}`;
         }
         if (userInfoAreaHeader) userInfoAreaHeader.style.display = 'flex';
-        if (sidebarLogoutButtonGlobal) sidebarLogoutButtonGlobal.style.display = 'flex';
-        if (headerSearchContainerGlobal) headerSearchContainerGlobal.style.display = 'flex';
+        if (sidebarLogoutButtonGlobal) sidebarLogoutButtonGlobal.style.display = 'flex'; // Mostrar botón de logout
+        if (headerSearchContainerGlobal) headerSearchContainerGlobal.style.display = 'flex'; // Mostrar búsqueda
     } else {
-        // Lógica para cuando no hay usuario (logout o carga inicial sin sesión)
         if (sidebarProfileInfoDiv) sidebarProfileInfoDiv.style.display = 'none';
         if (sidebarProfilePicImg) {
-            console.log(`[updateGlobalUserUI en ${pagePath}] Seteando sidebarProfilePicImg a placeholder (no userDataObject).`);
             sidebarProfilePicImg.src = 'placeholder-profile.jpg';
             sidebarProfilePicImg.alt = 'Foto de perfil';
         }
         if (sidebarProfileNameSpan) sidebarProfileNameSpan.textContent = 'Usuario';
         if (loggedInUserNameSpanHeader) loggedInUserNameSpanHeader.textContent = '';
         if (userInfoAreaHeader) userInfoAreaHeader.style.display = 'none';
-        if (sidebarLogoutButtonGlobal) sidebarLogoutButtonGlobal.style.display = 'none';
-        if (headerSearchContainerGlobal) headerSearchContainerGlobal.style.display = 'none';
+        if (sidebarLogoutButtonGlobal) sidebarLogoutButtonGlobal.style.display = 'none'; // Ocultar botón de logout
+        if (headerSearchContainerGlobal) headerSearchContainerGlobal.style.display = 'none'; // Ocultar búsqueda
     }
 };
 
@@ -68,45 +60,218 @@ window.updateGlobalUserUI = function(userDataObject) {
 window.addEventListener('storage', function(event) {
     if (event.key === 'loggedInUser') {
         const pagePath = window.location.pathname;
-        // Loguear solo una parte del string si es muy largo
         const newV = event.newValue ? (event.newValue.length > 150 ? event.newValue.substring(0, 150) + '...' : event.newValue) : 'null';
-        const oldV = event.oldValue ? (event.oldValue.length > 150 ? event.oldValue.substring(0, 150) + '...' : event.oldValue) : 'null';
-        console.log(`[Storage Event en ${pagePath}] Clave: ${event.key}, Valor Nuevo: ${newV}, Valor Antiguo: ${oldV}`);
+        console.log(`[Storage Event en ${pagePath}] Clave: ${event.key}, Nuevo valor: ${newV}`);
 
-        if (event.newValue) { // Se actualizó o se inició sesión en otra pestaña
+        if (event.newValue) {
             try {
                 const updatedUserFromStorage = JSON.parse(event.newValue);
-                console.log(`[Storage Event en ${pagePath}] Usuario parseado de newValue:`, updatedUserFromStorage ? JSON.parse(JSON.stringify(updatedUserFromStorage)) : null);
-
                 if (updatedUserFromStorage && updatedUserFromStorage.userId) {
-                    console.log(`[Storage Event en ${pagePath}] Llamando a updateGlobalUserUI con profilePhotoPath: ${updatedUserFromStorage.profilePhotoPath}`);
                     window.updateGlobalUserUI(updatedUserFromStorage);
                 } else {
-                    console.warn(`[Storage Event en ${pagePath}] updatedUserFromStorage no es válido o no tiene userId. Llamando a updateGlobalUserUI con null.`);
                     window.updateGlobalUserUI(null);
                 }
             } catch (e) {
-                console.error(`[Storage Event en ${pagePath}] Error parseando newValue:`, e, event.newValue);
+                console.error(`[Storage Event en ${pagePath}] Error parseando newValue:`, e);
                 window.updateGlobalUserUI(null);
             }
-        } else { // loggedInUser fue eliminado de localStorage (logout en otra pestaña)
-            console.log(`[Storage Event en ${pagePath}] loggedInUser eliminado (logout en otra pestaña).`);
+        } else {
             window.updateGlobalUserUI(null);
-            // Mostrar sección de login si estamos en una página que la tenga
             const loginSect = document.getElementById('login-section');
             const mainCont = document.getElementById('main-content');
-            if (loginSect) loginSect.style.display = 'block';
-            if (mainCont) mainCont.style.display = 'none';
+            if (loginSect && mainCont) { // Asegurarse que existen antes de manipularlos
+                 loginSect.style.display = 'block';
+                 mainCont.style.display = 'none';
+            }
+        }
+    } else if (event.key === 'theme') { // Escuchar cambios de tema desde otras pestañas
+        const newTheme = event.newValue;
+        if (newTheme) {
+            applyTheme(newTheme); // Definir applyTheme globalmente o dentro de DOMContentLoaded y llamarla
         }
     }
 });
 
+// --- INICIO LÓGICA DE TEMA ---
+// Estas funciones y variables para el tema deben estar accesibles globalmente
+// o, si están dentro de DOMContentLoaded, el listener de 'storage' también debe estarlo
+// o tener una forma de llamar a la función applyTheme.
+// Por simplicidad, las definiré aquí y el DOMContentLoaded las usará.
 
-document.addEventListener('DOMContentLoaded', () => {
+const htmlElementForTheme  = document.documentElement;
+let availableThemes = {}; // Objeto para almacenar {id: "Nombre para Mostrar"}
+// Función para aplicar el tema
+function applyTheme(themeId) {
+    if (!themeId) return;
+
+    htmlElementForTheme.setAttribute('data-theme', themeId); // Aplicar a <html>
+    localStorage.setItem('theme', themeId);
+    
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect && themeSelect.value !== themeId) {
+        themeSelect.value = themeId;
+    }
+    console.log(`[Tema] Tema aplicado: ${themeId}`);
+}
+// Función para leer temas del CSS
+async function loadThemesFromCSS() {
+    availableThemes = {}; // Resetear por si se llama múltiples veces (aunque usualmente es una vez)
+    console.log("[Tema] Iniciando carga de temas desde CSS...");
+
+    let themeSheet = null;
+    // Intentar encontrar la hoja de estilos 'themes.css'
+    for (let i = 0; i < document.styleSheets.length; i++) {
+        const sheet = document.styleSheets[i];
+        // Comprobar que sheet.href exista y que termine con 'themes.css'
+        // Usar endsWith es más preciso que includes si tienes otros CSS con 'themes' en el nombre
+        if (sheet.href && sheet.href.endsWith('themes.css')) {
+            themeSheet = sheet;
+            console.log("[Tema] Hoja de estilos 'themes.css' encontrada en:", themeSheet.href);
+            break;
+        }
+    }
+
+    if (!themeSheet) {
+        console.warn("[Tema] ADVERTENCIA: Hoja de estilos 'themes.css' no encontrada en document.styleSheets. " +
+                     "Verifique la etiqueta <link> en su HTML, la ruta del archivo y el orden de carga. " +
+                     "Usando temas de fallback.");
+        availableThemes = { 'dark': 'Oscuro (Fallback)', 'light': 'Claro (Fallback)' };
+        return; // Salir si no se encuentra la hoja, ya se establecieron los fallbacks
+    }
+    
+    try {
+        // Esperar a que las reglas CSS estén disponibles si es necesario.
+        let retries = 10; // Aumentar un poco los reintentos y el tiempo
+        let rulesAvailable = false;
+        if (themeSheet.cssRules !== null) {
+            rulesAvailable = true;
+        } else {
+            // Si las reglas no están disponibles inmediatamente (ej. CSS cargado asíncronamente o muy grande),
+            // intentar obtenerlas después de un breve retraso.
+            // Esto es más probable si el script se ejecuta antes de que el CSS esté completamente parseado
+            // a pesar de DOMContentLoaded.
+            while (retries > 0) {
+                console.log(`[Tema] cssRules para 'themes.css' es null, reintentando... (${retries} restantes)`);
+                await new Promise(resolve => setTimeout(resolve, 100)); // Esperar 100ms
+                if (themeSheet.cssRules !== null) {
+                    rulesAvailable = true;
+                    break;
+                }
+                retries--;
+            }
+        }
+
+        if (!rulesAvailable) {
+            console.error("[Tema] ERROR: cssRules para 'themes.css' siguen siendo null después de los reintentos. " +
+                          "Esto puede suceder si el archivo está vacío, malformado, o hay problemas de carga/CORS " +
+                          "(aunque CORS no debería ser un problema para archivos del mismo origen). Usando temas de fallback.");
+            availableThemes = { 'dark': 'Oscuro (Fallback Crit.)', 'light': 'Claro (Fallback Crit.)' };
+            return;
+        }
+
+        console.log(`[Tema] Número de reglas en themes.css: ${themeSheet.cssRules.length}`);
+
+        for (const rule of themeSheet.cssRules) {
+            // Solo procesar reglas de estilo (CSSRule.STYLE_RULE === 1)
+            if (rule.type === 1 /* CSSRule.STYLE_RULE */) {
+                const selectorText = rule.selectorText;
+
+                // Buscar temas definidos con html[data-theme="..."]
+                if (selectorText && selectorText.startsWith('html[data-theme="')) {
+                    const themeIdMatch = selectorText.match(/html\[data-theme="([^"]+)"\]/);
+                    if (themeIdMatch && themeIdMatch[1]) {
+                        const themeId = themeIdMatch[1];
+                        let themeName = themeId.charAt(0).toUpperCase() + themeId.slice(1); // Nombre por defecto
+
+                        // Intentar leer la variable --theme-name de la regla
+                        const nameMatch = rule.style.getPropertyValue('--theme-name').trim();
+                        if (nameMatch) {
+                            // Quitar comillas si están presentes (ej. "'Nombre Tema'" o '"Nombre Tema"')
+                            themeName = nameMatch.replace(/^['"]|['"]$/g, "");
+                        }
+                        availableThemes[themeId] = themeName;
+                        // console.log(`[Tema] Encontrado tema [${themeId}]: ${themeName} desde selector "${selectorText}"`);
+                    }
+                } 
+                // Buscar el tema por defecto (asumido 'dark')
+                // Lo busca en selectores como 'html:not([data-theme])' o explícitamente 'html[data-theme="dark"]'
+                // y solo si 'dark' no ha sido ya añadido (para evitar sobreescribir una definición explícita de 'dark').
+                else if (selectorText && 
+                         (selectorText.includes('html:not([data-theme])') || selectorText.includes('html[data-theme="dark"]')) &&
+                         !availableThemes['dark']) {
+                    
+                    let defaultThemeName = "Oscuro Defecto"; // Nombre por defecto si no se encuentra --theme-name
+                    const nameMatch = rule.style.getPropertyValue('--theme-name').trim();
+                    if (nameMatch) {
+                        defaultThemeName = nameMatch.replace(/^['"]|['"]$/g, "");
+                    }
+                    availableThemes['dark'] = defaultThemeName; // Asignar al ID 'dark'
+                    // console.log(`[Tema] Encontrado tema por defecto (dark): ${defaultThemeName} desde selector "${selectorText}"`);
+                }
+            }
+        }
+        
+        if (Object.keys(availableThemes).length === 0) {
+            console.warn("[Tema] No se extrajeron temas de themes.css. " +
+                         "Asegúrese de que las reglas estén bien definidas (ej. html[data-theme='nombre'] { --theme-name: 'Nombre Bonito'; ... }). " +
+                         "Usando temas de fallback.");
+            availableThemes = { 'dark': 'Oscuro (Fallback Vacío)', 'light': 'Claro (Fallback Vacío)' };
+        } else if (!availableThemes['dark']) { 
+            // Si se extrajeron temas pero 'dark' (nuestro default esperado) no está, añadirlo.
+            console.warn("[Tema] Tema 'dark' no encontrado explícitamente, añadiendo como fallback.");
+            availableThemes['dark'] = 'Oscuro';
+        }
+
+        console.log("[Tema] Temas disponibles cargados final:", availableThemes);
+
+    } catch (error) {
+        console.error("[Tema] ERROR CRÍTICO cargando/parseando temas desde CSS:", error, error.stack);
+        availableThemes = { 'dark': 'Oscuro (Error Carga)', 'light': 'Claro (Error Carga)' };
+    }
+}
+// Función para poblar el selector de temas
+function populateThemeSelector() {
+    const themeSelect = document.getElementById('themeSelect');
+    if (!themeSelect || Object.keys(availableThemes).length === 0) return;
+
+    themeSelect.innerHTML = ''; // Limpiar opciones anteriores
+
+    // Asegurarse que el tema por defecto (ej. 'dark') aparezca, y quizás primero.
+    const themeOrder = ['dark', ...Object.keys(availableThemes).filter(id => id !== 'dark')];
+
+
+    themeOrder.forEach(themeId => {
+        if (availableThemes[themeId]) {
+            const option = document.createElement('option');
+            option.value = themeId;
+            option.textContent = availableThemes[themeId];
+            themeSelect.appendChild(option);
+        }
+    });
+
+    const currentTheme = localStorage.getItem('theme') || 'dark'; // Asumir 'dark' como default
+    if (availableThemes[currentTheme]) {
+        themeSelect.value = currentTheme;
+    }
+
+    themeSelect.addEventListener('change', (event) => {
+        applyTheme(event.target.value);
+    });
+}
+
+function toggleTheme() {
+    const isCurrentlyLight = bodyElementForTheme.classList.contains('light-theme');
+    const newTheme = isCurrentlyLight ? 'dark' : 'light';
+    localStorage.setItem('theme', newTheme);
+    applyTheme(newTheme);
+}
+// --- FIN LÓGICA DE TEMA ---
+
+
+document.addEventListener('DOMContentLoaded', async () => {
     const API_BASE_URL = '/api';
     const FRONTEND_MONEY_SYMBOL = '💰';
 
-    // --- Obtención de Elementos del DOM ---
     const loginSection = document.getElementById('login-section');
     const loginPhoneNumberInput = document.getElementById('loginPhoneNumber');
     const loginPasswordInput = document.getElementById('loginPassword');
@@ -119,6 +284,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerSearchUserButton = document.getElementById('headerSearchUserButton');
     const sidebarProfileInfoDiv = document.getElementById('sidebarProfileInfo');
     const sidebarLogoutButton = document.getElementById('sidebarLogoutButton');
+
+    // --- LÓGICA DE TEMA (OBTENCIÓN DE BOTÓN Y CARGA INICIAL) ---
+    const themeToggleButton = document.getElementById('themeToggleButton');
+    if (themeToggleButton) {
+        themeToggleButton.addEventListener('click', toggleTheme);
+    }
+    await loadThemesFromCSS(); // Esperar a que se carguen los temas
+    populateThemeSelector();   // Llenar el dropdown
+    // Aplicar tema guardado o por defecto al cargar la página
+    const savedTheme = localStorage.getItem('theme');
+    let initialTheme = 'dark'; // Tema por defecto
+    if (savedTheme && availableThemes[savedTheme]) {
+        initialTheme = savedTheme;
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches && availableThemes['light']) {
+        initialTheme = 'light';
+    }
+    // Si el initialTheme no está en availableThemes (ej. localStorage corrupto), se queda 'dark' (o el primero de availableThemes)
+    if (!availableThemes[initialTheme] && Object.keys(availableThemes).length > 0) {
+        initialTheme = Object.keys(availableThemes)[0];
+    }
+
+    applyTheme(initialTheme);
+    if (!localStorage.getItem('theme')) { // Si no había nada guardado, guardar el inicial
+        localStorage.setItem('theme', initialTheme);
+    }
+    // --- FIN LÓGICA DE TEMA ---
 
     let loggedInUserObject = null; // Variable global en este script para el usuario actual
 

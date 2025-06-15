@@ -1,0 +1,198 @@
+/* TEMA OSCURO POR DEFECTO (cuando html no tiene data-theme o es data-theme="dark") */
+html:not([data-theme]), /* Para cuando el atributo no está presente en absoluto */
+html[data-theme="dark"] {
+    --theme-name: "Oscuro"; /* Nombre descriptivo para el selector */
+
+    --bg-color: #1E1E1E;
+    --text-color: #E0E0E0;
+    --text-secondary-color: #B0B0B0;
+    --card-bg-color: #252525;
+    --header-bg-color: #2D2D2D;
+    --header-text-color: #E0E0E0;
+    --border-color: #444;
+    --accent-color: #5cb85c; /* Verde */
+    --accent-color-hover: #4cae4c;
+    --highlight-bg-color: #f1c40f;
+    --highlight-text-color: #333;
+    --error-color: #e74c3c;
+    --success-color: var(--accent-color);
+    --button-text-color: white;
+    /* ... otras variables específicas del tema oscuro si las necesitas ... */
+}
+
+html[data-theme="dark-of"] {
+    --theme-name: "Oscuro 2"; /* Nombre descriptivo para el selector */
+
+    --bg-color: #000000;
+    --text-color: #E0E0E0;
+    --text-secondary-color: #B0B0B0;
+    --card-bg-color: #0e0e0e;
+    --header-bg-color: #0e0e0e;
+    --header-text-color: #E0E0E0;
+    --border-color: #444;
+    --accent-color: #8162c8; /* Verde */
+    --accent-color-hover: #1d1c3a;
+    --highlight-bg-color: #221935;
+    --highlight-text-color: #333;
+    --error-color: #e74c3c;
+    --success-color: var(--accent-color);
+    --button-text-color: white;
+    /* ... otras variables específicas del tema oscuro si las necesitas ... */
+}
+
+html[data-theme="light"] {
+    --theme-name: "Claro";
+
+    --bg-color: #F8F9FA;
+    --text-color: #212529;
+    --text-secondary-color: #6C757D;
+    --card-bg-color: #FFFFFF;
+    --header-bg-color: #E9ECEF;
+    --header-text-color: #343A40;
+    --border-color: #DEE2E6;
+    --accent-color: #007BFF; /* Azul */
+    --accent-color-hover: #0056b3;
+    --highlight-bg-color: #FFF3CD;
+    --highlight-text-color: #856404;
+    --error-color: #DC3545;
+    --success-color: #28A745; /* Verde diferente para claro */
+    --button-text-color: white;
+}
+html[data-theme="sepia"] {
+    --theme-name: "Sepia";
+
+    --bg-color: #f4e8c1;
+    --text-color: #5b4636;
+    --text-secondary-color: #8d6e63;
+    --card-bg-color: #efebe9;
+    --header-bg-color: #d7ccc8;
+    --header-text-color: #4e342e;
+    --border-color: #bcaaa4;
+    --accent-color: #8d6e63; /* Marrón sepia */
+    --accent-color-hover: #6d4c41;
+    --highlight-bg-color: #fff9c4;
+    --highlight-text-color: #795548;
+    --error-color: #c62828;
+    --success-color: #388e3c;
+    --button-text-color: white;
+}
+
+/* Puedes añadir más temas aquí siguiendo el mismo patrón: */
+/*
+body[data-theme="nombre-del-tema-en-minusculas"] {
+    --theme-name: "Nombre Para Mostrar Del Tema";
+    --bg-color: ...;
+    --text-color: ...;
+    ...etc...
+}
+*/
+
+
+html[data-theme="dracula"] {
+    --theme-name: "Drácula Moderno"; /* Inspirado en el popular tema Drácula */
+
+    --bg-color: #282a36;
+    --text-color: #f8f8f2;
+    --text-secondary-color: #bd93f9; /* Púrpura para secundario */
+    --card-bg-color: #44475a;
+    --header-bg-color: #21222c;
+    --header-text-color: #f8f8f2;
+    --border-color: #6272a4;
+    --accent-color: #50fa7b; /* Verde lima */
+    --accent-color-hover: #42e068;
+    --highlight-bg-color: #f1fa8c; /* Amarillo */
+    --highlight-text-color: #282a36;
+    --error-color: #ff5555; /* Rojo */
+    --success-color: var(--accent-color);
+    --button-text-color: #282a36; /* Texto oscuro para botones con fondo claro */
+}
+
+html[data-theme="ocean-blue"] {
+    --theme-name: "Azul Océano";
+
+    --bg-color: #e0f7fa; /* Azul cielo muy claro */
+    --text-color: #004d40; /* Verde azulado oscuro */
+    --text-secondary-color: #00796b; /* Verde azulado medio */
+    --card-bg-color: #ffffff;
+    --header-bg-color: #b2ebf2; /* Azul claro */
+    --header-text-color: #004d40;
+    --border-color: #80deea;
+    --accent-color: #00acc1; /* Cyan */
+    --accent-color-hover: #00838f;
+    --highlight-bg-color: #fffde7; /* Crema */
+    --highlight-text-color: #006064;
+    --error-color: #d32f2f;
+    --success-color: #388e3c;
+    --button-text-color: white;
+}
+
+html[data-theme="forest-green"] {
+    --theme-name: "Verde Bosque";
+
+    --bg-color: #2e3c30; /* Verde muy oscuro */
+    --text-color: #c8e6c9; /* Verde pálido */
+    --text-secondary-color: #a5d6a7; /* Verde claro */
+    --card-bg-color: #38473a; /* Verde oscuro medio */
+    --header-bg-color: #1b2b1d; /* Verde más oscuro para header */
+    --header-text-color: #c8e6c9;
+    --border-color: #4a5c4c;
+    --accent-color: #81c784; /* Verde brillante */
+    --accent-color-hover: #66bb6a;
+    --highlight-bg-color: #a9d18e;
+    --highlight-text-color: #1b2b1d;
+    --error-color: #ef5350;
+    --success-color: var(--accent-color);
+    --button-text-color: #1b2b1d;
+}
+
+html[data-theme="midnight-purple"] {
+    --theme-name: "Púrpura Medianoche";
+
+    --bg-color: #2c2541; /* Púrpura muy oscuro */
+    --text-color: #e1bee7; /* Lavanda pálido */
+    --text-secondary-color: #ce93d8; /* Lavanda medio */
+    --card-bg-color: #3f365d; /* Púrpura oscuro medio */
+    --header-bg-color: #1a1423; /* Púrpura más oscuro */
+    --header-text-color: #e1bee7;
+    --border-color: #514775;
+    --accent-color: #ab47bc; /* Púrpura brillante */
+    --accent-color-hover: #9c27b0;
+    --highlight-bg-color: #f3e5f5; /* Lavanda muy pálido */
+    --highlight-text-color: #3f365d;
+    --error-color: #f44336;
+    --success-color: #4caf50;
+    --button-text-color: white;
+}
+
+
+/* Plantilla para nuevos temas:
+body[data-theme="nombre-tema"] {
+    --theme-name: "Nombre Descriptivo";
+
+    --bg-color: #xxxxxx;
+    --text-color: #xxxxxx;
+    --text-secondary-color: #xxxxxx;
+    --card-bg-color: #xxxxxx;
+    --header-bg-color: #xxxxxx;
+    --header-text-color: #xxxxxx;
+    --border-color: #xxxxxx;
+    --accent-color: #xxxxxx;
+    --accent-color-hover: #xxxxxx;
+    --highlight-bg-color: #xxxxxx;
+    --highlight-text-color: #xxxxxx;
+    --error-color: #xxxxxx;
+    --success-color: #xxxxxx;
+    --button-text-color: #xxxxxx;
+}
+*/
+:root { 
+    /* Estas variables de layout son globales y no dependen del tema,
+       así que :root está bien para ellas. El script del <head> no las toca. */
+    --header-desktop-height: 57px;
+    --header-mobile-wrap-height: 111px;
+    --header-mobile-small-height: 100px;
+    --transition-speed-fast: 0.2s;
+    --transition-speed-normal: 0.3s;
+    --transition-speed-slow: 0.5s;
+    --easing-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+}

@@ -461,3 +461,331 @@ h1#userProfileName.profile-main-name.editable-name:hover {
 .sidebar ul li a.active .sidebar-icon {
     /* fill: white; ya debería serlo por currentColor */
 }
+
+
+
+/* public/style.css */
+
+/* Este archivo AHORA SOLO USA las variables definidas en themes.css
+   y define estilos estructurales o que no cambian con el tema. */
+/* Las definiciones de :root para colores de tema se movieron a themes.css */
+
+/* Variables de layout que no cambian con el tema (si no están en themes.css :root) */
+:root {
+    --header-desktop-height: 57px;
+    --header-mobile-wrap-height: 111px;
+    --header-mobile-small-height: 100px;
+    --transition-speed-fast: 0.2s;
+    --transition-speed-normal: 0.3s;
+    --transition-speed-slow: 0.5s;
+    --easing-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    overflow-x: hidden;
+    padding-top: var(--header-desktop-height);
+    transition: background-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease;
+}
+
+body.modal-open-no-scroll {
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   2. LAYOUT GENERAL
+   ========================================================================== */
+.container {
+    max-width: 1200px;
+    margin: auto;
+    display: flex;
+}
+
+/* ==========================================================================
+   3. COMPONENTES PRINCIPALES (Header, Sidebar, Content)
+   ========================================================================== */
+
+/* -------------------- Header -------------------- */
+header {
+    background-color: var(--header-bg-color);
+    color: var(--header-text-color);
+    padding: 8px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1000;
+    gap: 10px;
+    border-bottom: 1px solid var(--border-color);
+    height: var(--header-desktop-height);
+    transition: background-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease;
+}
+
+.menu-toggle { display: none; background: none; border: none; color: var(--header-text-color); font-size: 28px; cursor: pointer; padding: 0 10px; margin: 0; transition: color var(--transition-speed-fast) ease, transform var(--transition-speed-fast) ease; }
+.menu-toggle:hover { color: var(--accent-color); }
+.menu-toggle:active { transform: scale(0.9); }
+
+.header-search-container { display: flex; align-items: center; background-color: color-mix(in srgb, var(--header-bg-color) 80%, var(--bg-color) 20%); border-radius: 25px; padding: 4px 4px 4px 15px; flex-grow: 1; max-width: 450px; border: 1px solid var(--border-color); transition: background-color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease;}
+.header-search-container input[type="text"] { flex-grow: 1; background-color: transparent; border: none; color: var(--text-color); padding: 8px 10px; margin-bottom: 0; outline: none; font-size: 0.95em; }
+.header-search-container input[type="text"]::placeholder { color: var(--text-secondary-color); }
+.header-search-container input[type="text"]:focus { box-shadow: none; }
+
+.search-icon-btn { background-color: var(--card-bg-color); border: none; color: var(--text-color); padding: 7px; margin: 0; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color var(--transition-speed-fast) ease, color var(--transition-speed-fast) ease, transform var(--transition-speed-fast) ease; }
+.search-icon-btn:hover { background-color: var(--accent-color); color: var(--button-text-color); }
+.search-icon-btn:active { transform: scale(0.9); }
+.search-icon-btn svg { display: block; }
+
+.user-info-header { display: flex; align-items: center; white-space: nowrap; }
+.user-info-header span { margin-right: 15px; color: var(--header-text-color); font-weight: 500; }
+
+/* -------------------- Sidebar -------------------- */
+.sidebar { width: 260px; background-color: var(--header-bg-color); padding: 0; position: fixed; left: 0; top: var(--header-desktop-height); bottom: 0; overflow-y: auto; transition: transform var(--transition-speed-normal) ease, box-shadow var(--transition-speed-normal) ease, background-color var(--transition-speed-normal) ease; z-index: 900; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); }
+.sidebar-header-controls { display: flex; justify-content: flex-start; align-items: center; padding: 10px 15px; min-height: 36px; }
+.sidebar-logout-btn { background-color: transparent; border: none; color: var(--text-secondary-color); padding: 8px; margin: 0; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color var(--transition-speed-fast) ease, color var(--transition-speed-fast) ease, transform var(--transition-speed-fast) ease; }
+.sidebar-logout-btn:hover { background-color: var(--card-bg-color); color: var(--accent-color); }
+.sidebar-logout-btn:active { transform: scale(0.9); }
+.sidebar-logout-btn svg { display: block; }
+
+.sidebar-profile { display: flex; flex-direction: column; align-items: center; padding: 15px 15px 25px 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 15px; cursor: pointer; transition: background-color var(--transition-speed-fast) ease, border-color var(--transition-speed-normal) ease; }
+.sidebar-profile:hover { background-color: var(--card-bg-color); }
+.sidebar-profile .profile-pic { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 3px solid var(--border-color); background-color: var(--border-color); transition: transform var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease; }
+.sidebar-profile:hover .profile-pic { transform: scale(1.05); border-color: var(--accent-color); }
+.sidebar-profile .profile-name { color: var(--header-text-color); font-weight: 600; font-size: 1.1em; }
+
+.sidebar ul { list-style-type: none; padding: 0 15px; margin: 0; flex-grow: 1; }
+.sidebar ul li { margin-bottom: 5px; }
+.sidebar ul li a { text-decoration: none; color: var(--text-secondary-color); padding: 12px 20px; display: block; border-radius: 6px; transition: background-color var(--transition-speed-fast) ease, color var(--transition-speed-fast) ease, padding-left var(--transition-speed-fast) ease; font-weight: 500; font-size: 0.95em; }
+.sidebar ul li a:hover { background-color: var(--card-bg-color); color: var(--text-color); padding-left: 25px; }
+.sidebar ul li a.active { background-color: var(--accent-color); color: var(--button-text-color); font-weight: 600; box-shadow: -3px 0 0 0 var(--bg-color) inset; }
+.sidebar ul li a.active:hover { background-color: var(--accent-color-hover); padding-left: 20px; }
+hr.sidebar-hr { border-top: 1px solid var(--border-color); margin: 15px 0; transition: border-color var(--transition-speed-normal) ease; }
+
+/* -------------------- Selector de Tema en Sidebar -------------------- */
+.theme-selector-sidebar {
+    padding: 10px 15px 15px 15px;
+    text-align: left;
+    /*border-top: 1px solid var(--border-color);
+    margin-top: auto; /* Empuja al final del sidebar si es flex column */
+    transition: border-color var(--transition-speed-normal) ease;
+}
+
+.theme-select-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.85em;
+    color: var(--text-secondary-color);
+    font-weight: 500;
+    transition: color var(--transition-speed-normal) ease;
+}
+
+#themeSelect {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease;
+}
+
+#themeSelect:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 20%, transparent);
+}
+
+
+/* -------------------- Content Area -------------------- */
+.content { flex-grow: 1; padding: 25px; background: var(--bg-color); margin-left: 260px; min-height: calc(100vh - var(--header-desktop-height)); transition: background-color var(--transition-speed-normal) ease, margin-left var(--transition-speed-normal) ease; }
+
+/* ==========================================================================
+   4. ELEMENTOS COMUNES
+   ========================================================================== */
+h1,h2 { color: var(--text-color); text-align: center; transition: color var(--transition-speed-normal) ease; }
+h1 { font-size: 1.8em; margin-top:0; margin-bottom: 25px; }
+h2 { font-size: 1.4em; margin-top:0; margin-bottom: 20px; }
+hr:not(.sidebar-hr) { margin: 30px 0; border: 0; border-top: 1px solid var(--border-color); transition: border-color var(--transition-speed-normal) ease; }
+button { padding: 10px 18px; background-color: var(--accent-color); color: var(--button-text-color); border: none; border-radius: 6px; cursor: pointer; font-size: 1em; transition: background-color var(--transition-speed-fast) ease, transform var(--transition-speed-fast) ease, box-shadow var(--transition-speed-fast) ease, color var(--transition-speed-fast) ease; font-weight: 500; display: block; margin: 20px auto; }
+button:hover { background-color: var(--accent-color-hover); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+button:active { transform: scale(0.98); }
+input[type="text"], input[type="password"] { width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--card-bg-color); color: var(--text-color); font-size: 1em; transition: border-color var(--transition-speed-fast) ease, box-shadow var(--transition-speed-fast) ease, background-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease; }
+input[type="text"]::placeholder, input[type="password"]::placeholder { color: var(--text-secondary-color); }
+input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 30%, transparent); outline: none; }
+.message-area { margin-top: 15px; font-weight: bold; text-align: center; padding: 10px; border-radius: 4px; opacity: 0; transform: translateY(10px); transition: opacity var(--transition-speed-normal) ease, transform var(--transition-speed-normal) ease, background-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease; }
+.message-area.visible { opacity: 1; transform: translateY(0); }
+.message-area.success { color: var(--success-color); background-color: color-mix(in srgb, var(--success-color) 10%, transparent); }
+.message-area.error { color: var(--error-color); background-color: color-mix(in srgb, var(--error-color) 10%, transparent); }
+.error { color: var(--error-color); font-weight: bold; }
+.highlight { background-color: var(--highlight-bg-color); color: var(--highlight-text-color); padding: 1px 3px; border-radius: 3px; font-weight: bold; transition: background-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease; }
+
+/* ==========================================================================
+   5. ESTILOS DE SECCIONES Y PÁGINAS ESPECÍFICAS
+   ========================================================================== */
+#login-section { background-color: var(--card-bg-color); padding: 25px; border-radius: 8px; margin: 30px auto; max-width: 400px; border: 1px solid var(--border-color); transition: background-color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease;}
+#login-section h2 { margin-bottom: 20px; }
+#login-section input[type="text"], #login-section input[type="password"] { margin-bottom: 20px; }
+#login-section button#loginButton { width: 100%; padding: 12px; font-size: 1.1em; }
+
+.data-list { margin-top: 20px; overflow-x: auto; background-color: var(--card-bg-color); border-radius: 6px; padding: 10px; transition: background-color var(--transition-speed-normal) ease; }
+.data-list table { width: 100%; border-collapse: collapse; }
+.data-list th, .data-list td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border-color); white-space: nowrap; transition: border-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease; }
+.data-list th { background-color: color-mix(in srgb, var(--card-bg-color) 85%, var(--text-color) 15%); color: var(--text-color); font-weight: 600; transition: background-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease; }
+.data-list td { color: var(--text-secondary-color); }
+.data-list tr:last-child td { border-bottom: none; }
+.data-list table tr { opacity: 1; transition: background-color var(--transition-speed-fast) ease, opacity var(--transition-speed-slow) ease; }
+.data-list table tr:hover { background-color: color-mix(in srgb, var(--card-bg-color) 90%, var(--text-color) 10%); }
+
+.user-info-card { background-color: var(--card-bg-color); padding: 20px; border-radius: 6px; margin-top: 20px; line-height: 1.7; opacity: 0; transform: scale(0.95) translateY(20px); transition: opacity var(--transition-speed-normal) ease, transform var(--transition-speed-normal) ease, background-color var(--transition-speed-normal) ease; }
+.user-info-card.visible { opacity: 1; transform: scale(1) translateY(0); }
+.user-info-card p { margin: 8px 0; color: var(--text-secondary-color); transition: color var(--transition-speed-normal) ease; }
+.user-info-card strong { display: inline-block; min-width: 120px; color: var(--text-color); transition: color var(--transition-speed-normal) ease; }
+.user-info-card h4 { color: var(--accent-color); margin-bottom: 15px; margin-top: 0; text-align: left; transition: color var(--transition-speed-normal) ease; }
+
+#game-menu { margin-top: 15px; }
+#game-menu a.active { background-color: var(--card-bg-color); color: var(--text-color); }
+#game-content-area { margin-top: 20px; padding: 20px; background-color: var(--card-bg-color); border-radius: 6px; border: 1px solid var(--border-color); min-height: 300px; transition: background-color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease; }
+#game-content-area > div { opacity: 0; transform: translateX(20px); animation: fadeInFromRight var(--transition-speed-normal) var(--easing-smooth) forwards; }
+@keyframes fadeInFromRight { to { opacity: 1; transform: translateX(0); } }
+#pacmanCanvas { max-width: 100%; height: auto; display: block; margin: 15px auto; border: 1px solid var(--border-color); background-color: color-mix(in srgb, var(--bg-color) 90%, black 10%); transition: border-color var(--transition-speed-normal) ease, background-color var(--transition-speed-normal) ease; }
+#pacman-controls button { margin: 15px auto; }
+
+.game-showcase { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 20px; }
+.game-card { background-color: var(--card-bg-color); border-radius: 8px; border: 1px solid var(--border-color); padding: 15px; width: calc(33.333% - 20px); min-width: 220px; max-width: 280px; text-align: center; display: flex; flex-direction: column; transition: transform var(--transition-speed-fast) ease, box-shadow var(--transition-speed-fast) ease, background-color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease; }
+.game-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px color-mix(in srgb, var(--bg-color) 70%, black 30%); }
+.game-card-cover { width: 100%; max-height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color); transition: border-color var(--transition-speed-normal) ease; }
+.game-card-name { font-size: 1.2em; color: var(--text-color); margin-bottom: 8px; min-height: 2.4em; transition: color var(--transition-speed-normal) ease; }
+.game-card-description { font-size: 0.9em; color: var(--text-secondary-color); margin-bottom: 15px; flex-grow: 1; min-height: 3.6em; transition: color var(--transition-speed-normal) ease; }
+.game-card-play-btn { padding: 10px 15px; font-size: 0.95em; width: 100%; margin-top: auto; }
+
+.search-results-container { margin-top: 20px; }
+.search-results-container ul { list-style-type: none; padding: 0; }
+.search-result-item { display: flex; align-items: center; padding: 12px 10px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color var(--transition-speed-fast) ease, transform var(--transition-speed-fast) ease, border-color var(--transition-speed-normal) ease; opacity: 0; transform: translateY(10px); }
+.search-result-item.visible { opacity: 1; transform: translateY(0); }
+.search-result-item:last-child { border-bottom: none; }
+.search-result-item:hover, .search-result-item.selected { background-color: var(--card-bg-color); transform: translateX(5px); }
+.search-result-item .result-profile-pic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 15px; background-color: var(--border-color); transition: background-color var(--transition-speed-normal) ease; }
+.search-result-item .result-username { flex-grow: 1; font-weight: 500; color: var(--text-color); transition: color var(--transition-speed-normal) ease; }
+.search-result-item .result-money { font-size: 0.9em; color: var(--text-secondary-color); white-space: nowrap; transition: color var(--transition-speed-normal) ease; }
+
+/* --- ESTILOS PÁGINA DE PERFIL --- */
+.profile-cover-photo { background-color: var(--card-bg-color); transition: background-color var(--transition-speed-normal) ease; }
+.profile-badge { background-color: color-mix(in srgb, var(--header-bg-color) 80%, transparent); color: var(--header-text-color); border: 2px solid color-mix(in srgb, var(--header-text-color) 20%, transparent); transition: background-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease; }
+.profile-picture-section { border: 5px solid var(--bg-color); background-color: var(--header-bg-color); transition: background-color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease; }
+h1#userProfileName.profile-main-name { color: var(--text-color); }
+.profile-stats { background-color: var(--card-bg-color); border: 1px solid var(--border-color); transition: background-color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease; }
+.stat-item .stat-value { color: var(--text-color); }
+.stat-item .stat-label { color: var(--text-secondary-color); }
+
+/* --- ESTILOS MODAL LISTA SEGUIDORES/SIGUIENDO --- */
+.modal-content { background-color: var(--header-bg-color); transition: background-color var(--transition-speed-normal) ease; }
+.modal-close-btn { color: var(--text-secondary-color); }
+.modal-close-btn:hover { color: var(--text-color); }
+.modal-tabs { border-bottom: 1px solid var(--border-color); transition: border-color var(--transition-speed-normal) ease; }
+.modal-tab-button { color: var(--text-secondary-color); }
+.modal-tab-button:hover { color: var(--text-color); background-color: var(--card-bg-color); }
+.modal-tab-button.active { color: var(--accent-color); background-color: color-mix(in srgb, var(--card-bg-color) 95%, var(--text-color) 5%); }
+.modal-user-list-item { border-bottom: 1px solid var(--border-color); }
+.modal-user-list-item:hover { background-color: var(--card-bg-color); }
+.modal-user-list-item .profile-pic { background-color: var(--border-color); }
+.modal-user-list-item .username { color: var(--text-color); }
+.modal-user-list-item .username:hover { color: var(--accent-color); }
+.modal-user-list p { color: var(--text-secondary-color); }
+
+/* --- ESTILOS MODAL EDICIÓN IMAGEN --- */
+.image-preview-container { background-color: var(--card-bg-color); transition: background-color var(--transition-speed-normal) ease; }
+
+/* --- ESTILOS EDICIÓN DE NOMBRE --- */
+h1#userProfileName.profile-main-name.editable-name:hover { color: var(--accent-color); }
+.edit-name-input { background-color: var(--card-bg-color); border-color: var(--border-color); color: var(--text-color); transition: background-color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease, color var(--transition-speed-normal) ease;}
+.edit-name-buttons .cancel-name-btn { background-color: var(--card-bg-color); color: var(--text-secondary-color); }
+.edit-name-buttons .cancel-name-btn:hover { background-color: color-mix(in srgb, var(--card-bg-color) 90%, var(--text-color) 10%); color: var(--text-color); }
+
+/* ==========================================================================
+   6. UTILIDADES
+   ========================================================================== */
+#pageOverlay { background-color: rgba(0,0,0,0.6); }
+.input-error-pulse { animation: pulse-red 0.5s 2; box-shadow: 0 0 0 2px color-mix(in srgb, var(--error-color) 70%, transparent) !important; }
+@keyframes pulse-red { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--error-color) 30%, transparent); } 70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--error-color) 0%, transparent); } 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--error-color) 0%, transparent); } }
+.sidebar ul li a .sidebar-icon { fill: currentColor; transition: fill var(--transition-speed-fast) ease; }
+
+
+/* ==========================================================================
+   7. MEDIA QUERIES (Estilos Responsivos)
+   ========================================================================== */
+@media (max-width: 992px) {
+    .game-card { width: calc(50% - 15px); }
+}
+
+@media (max-width: 768px) {
+    body { padding-top: var(--header-mobile-wrap-height); }
+    header { flex-wrap: wrap; height: auto; min-height: var(--header-desktop-height); }
+    .menu-toggle { display: block; order: 1; }
+    .header-search-container { order: 3; width: 100%; max-width: none; margin: 8px 0 0 0; }
+    .user-info-header { order: 2; }
+    .container { flex-direction: column; }
+    .sidebar { position: fixed; left: 0; top: 0; bottom: 0; height: 100vh; width: 280px; transform: translateX(-100%); z-index: 1050; box-shadow: 3px 0 10px rgba(0,0,0,0.3); padding-top: 20px; overflow-y: auto; }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar.open .sidebar-header-controls { padding-top: 15px; }
+    .content { margin-left: 0; width: 100%; padding: 20px; min-height: calc(100vh - var(--header-mobile-wrap-height)); }
+    .data-list { padding: 5px; }
+    #millonariosList table th, #millonariosList table td { padding: 8px 6px; font-size: 0.85em; }
+    #millonariosList table th { font-weight: 500; }
+    .search-result-item { padding: 10px 8px; }
+    .search-result-item .result-profile-pic { width: 35px; height: 35px; margin-right: 10px; }
+    .search-result-item .result-username { font-size: 0.95em; }
+    .search-result-item .result-money { font-size: 0.85em; }
+    .profile-cover-photo { height: 200px; }
+    .profile-picture-section { width: 100px; height: 100px; border-width: 4px; }
+    .profile-info-actions { margin-top: calc( (100px / 2) + 10px ); }
+    h1#userProfileName.profile-main-name { font-size: 1.6em; margin-bottom: 8px; }
+    .profile-stats { flex-wrap: wrap; padding: 10px; }
+    .stat-item { width: 50%; margin-bottom: 15px; padding: 0 5px; }
+    .stat-item .stat-value { font-size: 1.3em; }
+    .stat-item .stat-label { font-size: 0.8em; }
+    .profile-badge { width: 40px; height: 40px; font-size: 1em; bottom: 10px; left: 10px; border-width: 1px; }
+    .profile-badge span.badge-icon { font-size: 1.3em; }
+    h1 { font-size: 1.6em; } h2 { font-size: 1.3em; }
+    button, input[type="text"], input[type="password"] { font-size: 0.95em; }
+    #login-section { padding: 20px; margin: 20px auto; }
+    .user-info-card strong { min-width: 100px; }
+    #userProfileDetail h4 { font-size: 1.2em; }
+    #pacmanCanvas { max-width: 90%; }
+    .game-card { width: 100%; max-width: 350px; margin-left: auto; margin-right: auto; }
+    .game-card-name { min-height: 0; } .game-card-description { min-height: 0; }
+    .modal-content { width: 95%; padding: 15px; max-height: 90vh; }
+    .modal-user-list { max-height: calc(90vh - 110px); }
+    .modal-tab-button { font-size: 0.9em; padding: 10px 5px; }
+    .modal-user-list-item .username { font-size: 0.9em; }
+    .modal-user-list-item .follow-action-btn { padding: 5px 10px; font-size: 0.75em; min-width: 90px; }
+}
+
+@media (max-width: 480px) {
+    .user-info-header span { display: none; }
+    .header-search-container input[type="text"] { font-size: 0.9em; }
+    .sidebar { width: 250px; }
+    .content { padding: 15px; min-height: calc(100vh - var(--header-mobile-small-height, var(--header-mobile-wrap-height))); }
+    #millonariosList table th, #millonariosList table td { padding: 6px 4px; font-size: 0.8em; }
+    .profile-cover-photo { height: 160px; }
+    .profile-picture-section { width: 80px; height: 80px; border-width: 3px;}
+    .profile-info-actions { margin-top: calc( (80px / 2) + 10px ); }
+    h1#userProfileName.profile-main-name { font-size: 1.4em; }
+    .stat-item { padding: 0 2px; }
+    .stat-item .stat-value { font-size: 1.1em; }
+    .stat-item .stat-label { font-size: 0.75em; }
+    .profile-badge { width: 36px; height: 36px; font-size: 0.9em; }
+    .profile-badge span.badge-icon { font-size: 1.2em; }
+    h1 { font-size: 1.4em; } h2 { font-size: 1.2em; }
+}

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actividad en Spotify - En Directo</title>
+
+    <!-- 1. Cargar themes.css PRIMERO para definir las variables de tema -->
+    <link rel="stylesheet" href="themes.css">
+
+    <!-- 2. Cargar style.css DESPUÉS para que pueda usar las variables de themes.css -->
+    <link rel="stylesheet" href="style.css">
+    <!-- INICIO: Script para aplicar tema inmediatamente -->
+    <script src="loadtheme.js"></script>
+    <!-- FIN: Script para aplicar tema inmediatamente -->
+    <style>
+        /* Estilos específicos para la página spotify-activity.html */
+        /* Estos estilos usarán las variables definidas en themes.css */
+
+        .spotify-activity-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .spotify-user-card {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            width: calc(33.333% - 20px);
+            min-width: 280px;
+            max-width: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease,
+                background-color var(--transition-speed-normal) ease,
+                border-color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-user-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .spotify-user-card .user-profile-pic {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+            border: 2px solid var(--border-color);
+            transition: border-color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-user-card .user-name {
+            font-weight: bold;
+            color: var(--text-color);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            transition: color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-track-info {
+            text-align: center;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .album-art-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: box-shadow 0.4s ease-out;
+        }
+
+        .spotify-track-info .album-art {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+            transition: filter 0.3s ease;
+        }
+
+        .lyrics-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.0s 0.3s;
+            pointer-events: none;
+            border-radius: 6px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .lyrics-overlay .spotify-lyrics-display-area {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .lyric-line-context.lyric-current {
+            margin: 0;
+            padding: 0 5px;
+            font-size: 13px;
+            line-height: 1.35;
+            color: #FFFFFF;
+            /* Texto de letra usualmente blanco sobre overlay oscuro */
+            font-weight: 600;
+            opacity: 1;
+            white-space: normal;
+            overflow-wrap: break-word;
+            display: block;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        .spotify-track-info .track-name {
+            color: var(--accent-color);
+            margin-top: 12px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 1.15em;
+            line-height: 1.3;
+            text-shadow: 1px 1px 2px color-mix(in srgb, var(--bg-color) 50%, transparent);
+            /* Sombra sutil adaptada al fondo */
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: calc(1.15em * 1.3 * 2);
+            min-height: 1.3em;
+            transition: color var(--transition-speed-normal) ease, text-shadow var(--transition-speed-normal) ease;
+        }
+
+        .spotify-track-info .track-name a {
+            color: inherit;
+            /* Hereda el color de .track-name (que usa --accent-color) */
+            text-decoration: none;
+            transition: color 0.2s ease;
+            /* Transición solo para el color del enlace si se especifica diferente */
+        }
+
+        .spotify-track-info .track-name a:hover {
+            color: var(--accent-color-hover);
+            text-decoration: underline;
+        }
+
+        .spotify-track-info .track-artist,
+        .spotify-track-info .track-album {
+            font-size: 0.9em;
+            color: var(--text-secondary-color);
+            margin-bottom: 5px;
+            transition: color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-progress-bar-container {
+            width: 90%;
+            max-width: 250px;
+            height: 8px;
+            background-color: var(--border-color);
+            border-radius: 4px;
+            margin: 10px auto 5px auto;
+            overflow: hidden;
+            position: relative;
+            transition: background-color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-progress-bar-fill {
+            height: 100%;
+            background-color: var(--accent-color);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.2s linear, background-color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-progress-time {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8em;
+            color: var(--text-secondary-color);
+            width: 90%;
+            max-width: 250px;
+            margin: 5px auto 10px auto;
+            transition: color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-progress-time-current,
+        .spotify-progress-time-total {
+            white-space: nowrap;
+        }
+
+        .language-selector-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .language-selector-container label {
+            margin-right: 8px;
+            font-size: 0.9em;
+            color: var(--text-secondary-color);
+            transition: color var(--transition-speed-normal) ease;
+        }
+
+        #lyricsLanguageSelector {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg-color);
+            color: var(--text-color);
+            font-size: 0.9em;
+            transition: background-color var(--transition-speed-normal) ease,
+                border-color var(--transition-speed-normal) ease,
+                color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-user-card .translate-lyrics-btn {
+            background-color: color-mix(in srgb, var(--card-bg-color) 85%, var(--border-color) 15%);
+            color: var(--text-secondary-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            font-size: 0.8em;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color var(--transition-speed-normal) ease;
+        }
+
+        .spotify-user-card .translate-lyrics-btn:hover {
+            background-color: var(--card-bg-color);
+            color: var(--text-color);
+        }
+
+        .spotify-user-card .translate-lyrics-btn.showing-translated {
+            background-color: var(--accent-color);
+            color: var(--button-text-color);
+            border-color: var(--accent-color);
+        }
+
+        .spotify-activity-container p.no-activity-message {
+            width: 100%;
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary-color);
+            font-style: italic;
+            transition: color var(--transition-speed-normal) ease;
+        }
+
+        @media (max-width: 992px) {
+            .spotify-user-card {
+                width: calc(50% - 15px);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .spotify-user-card {
+                width: 100%;
+                max-width: 400px;
+            }
+
+            .lyric-line-context.lyric-current {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-overlay" id="pageOverlay"></div>
+    <header>
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <div class="header-search-container" id="headerSearchContainer" style="display: none;">
+            <input type="text" id="headerUserIdInput" placeholder="Buscar usuario...">
+            <button id="headerSearchUserButton" class="search-icon-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px"
+                    height="20px">
+                    <path
+                        d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                </svg>
+            </button>
+        </div>
+        <div id="userInfoArea" class="user-info-header" style="display: none;">
+            <span id="loggedInUserName"></span>
+        </div>
+    </header>
+
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header-controls">
+                <button id="sidebarLogoutButton" class="sidebar-logout-btn" title="Cerrar Sesión"
+                    style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px"
+                        height="22px">
+                        <path d="M0 0h24v24H0z" fill="none" />
+                        <path
+                            d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="sidebar-profile" id="sidebarProfileInfo" style="display: none;">
+                <img src="placeholder-profile.jpg" alt="Foto de perfil" id="sidebarProfilePic" class="profile-pic">
+                <span id="sidebarProfileName" class="profile-name">Usuario</span>
+            </div>
+            <!-- Selector de Tema en el Sidebar -->
+            <div class="theme-selector-sidebar">
+                <label for="themeSelect" class="theme-select-label">Tema:</label>
+                <select id="themeSelect">
+                    <!-- Opciones se añadirán con JS -->
+                </select>
+            </div>
+            <ul>
+                <li><a href="index.html">📊 Estadísticas</a></li>
+                <li><a href="juegos.html">🎲 Juegos</a></li>
+                <li>
+                    <a href="registros.html">
+                        <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                            fill="currentColor" width="18px" height="18px"
+                            style="margin-right: 8px; vertical-align: middle;">
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.25 2.52.77-1.28-3.52-2.09V8H12z" />
+                        </svg>
+                        Publicacion del Grupo
+                    </a>
+                </li>
+                <li>
+                    <a href="spotify-activity.html" class="active">
+                        <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                            fill="currentColor" width="18px" height="18px"
+                            style="margin-right: 8px; vertical-align: middle;">
+                            <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.36 14.12c-.2.24-.58.3-.84.11-.26-.19-3.41-2.09-3.41-2.09-.27-.16-.27-.55 0-.71l3.41-2.09c.26-.19.64-.13.84.11.21.24.15.62-.11.83l-2.69 1.65 2.69 1.65c.26.21.32.59.11.83zm-1.72-3.65c-.68.41-1.37.83-2.05 1.25l-2.05 1.25c-.27.16-.6.04-.73-.24-.13-.27-.01-.6.25-.74l2.05-1.25c.68-.41 1.37-.83 2.05-1.25l2.05-1.25c.27-.16-.6-.04.73.24.13.27.01-.6-.25.74l-2.05 1.25zM7.76 9.6c-.2-.24-.58-.3-.84-.11-.26-.19-3.41-2.09-3.41-2.09-.27.16-.27-.55 0 .71l3.41 2.09c.26.19.64.13.84.11.21.24.15.62-.11.83l-2.69-1.65L7.65 13.5c.26.21.32.59.11.83z" />
+                        </svg>
+                        Spotify En Directo
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <main class="content">
+            <h1>🎧 Actividad en Spotify</h1>
+            <div class="language-selector-container">
+                <label for="lyricsLanguageSelector">Traducir letras a:</label>
+                <select id="lyricsLanguageSelector">
+                    <option value="es">Español</option>
+                    <option value="en">Inglés</option>
+                    <option value="pt">Portugués</option>
+                    <option value="fr">Francés</option>
+                </select>
+            </div>
+            <p id="loadingMessage">Cargando actividad de los usuarios...</p>
+            <div id="spotifyActivityContainer" class="spotify-activity-container">
+            </div>
+            <button id="refreshActivityButton" style="margin-top: 20px; display: none;">Actualizar Actividad</button>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/fast-average-color@9.5.0/dist/index.browser.js" defer></script>
+    <script src="script.js" defer></script>
+    <script src="spotify-activity.js" defer></script>
+</body>
+
+</html>

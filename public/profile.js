@@ -40,9 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     followButtonContainer.className = 'profile-action-buttons';
     const followButton = document.createElement('button');
     followButton.id = 'followToggleButton';
-    followButton.addEventListener('click', handleFollowToggle); // Listener único
-
-    const globalSidebarProfilePic = document.getElementById('sidebarProfilePic'); 
+    // El listener se añade una sola vez en initializeProfilePage después de crear el botón
 
     // Elementos para la edición de nombre
     const editNameContainer = document.getElementById('editNameContainer');
@@ -51,16 +49,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelEditNameButton = document.getElementById('cancelEditNameButton');
     const editNameStatus = document.getElementById('editNameStatus');
 
-    let isEditingName = false; // Bandera para el estado de edición
+    // --- Elementos del DOM para Spotify ---
+    const connectSpotifyButton = document.getElementById('connectSpotifyButton');
+    const disconnectSpotifyButton = document.getElementById('disconnectSpotifyButton');
+    const spotifyStatusText = document.getElementById('spotifyStatusText');
+    const spotifyInfoDiv = document.getElementById('spotifyInfo');
+    const spotifyDisplayNameSpan = document.getElementById('spotifyDisplayName');
+    const spotifyProfileImage = document.getElementById('spotifyProfileImage');
+    const testConnectBtn = document.getElementById('connectSpotifyButton');
+    console.log('Boton Conectar al inicio del DOMContentLoaded:', testConnectBtn); // ¿Es null?
+
+    let isEditingName = false;
 
     // --- Estado Global del Script ---
-    let viewingUserId = null;       // ID del perfil que se está viendo
-    let loggedInUserId = null;      // ID del usuario que ha iniciado sesión
-    let currentUserData = null;     // Datos del perfil que se está viendo actualmente
-    let currentModalTab = 'followers'; // Pestaña activa en el modal de lista
-    let userIdForModalList = null;  // ID del perfil para el que se muestra la lista en el modal
-    let currentImageTypeToEdit = null; // 'profile' o 'cover' para el modal de edición de imagen
-    let selectedFile = null;        // Archivo seleccionado en el modal de edición de imagen
+    let viewingUserId = null;
+    let loggedInUserId = null;
+    let currentUserData = null;
+    let currentModalTab = 'followers';
+    let userIdForModalList = null;
+    let currentImageTypeToEdit = null;
+    let selectedFile = null;
 
 
     // =========================================================================
@@ -70,7 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const storedUser = localStorage.getItem('loggedInUser');
         if (storedUser) {
             try {
-                loggedInUserId = JSON.parse(storedUser).userId;
+                const parsedUser = JSON.parse(storedUser);
+                if (parsedUser && parsedUser.userId) {
+                    loggedInUserId = parsedUser.userId;
+                }
             } catch (e) { console.error("Error parseando loggedInUser de localStorage", e); }
         }
 
@@ -82,40 +93,89 @@ document.addEventListener('DOMContentLoaded', () => {
             viewingUserId = queryUserId;
             viendoMiPropioPerfil = loggedInUserId && viewingUserId === loggedInUserId;
         } else if (loggedInUserId) {
-            viewingUserId = loggedInUserId;
+            viewingUserId = loggedInUserId; // Viendo mi propio perfil por defecto si no hay ID en URL
+            window.history.replaceState({}, document.title, `${window.location.pathname}?id=${loggedInUserId}`); // Actualizar URL
             viendoMiPropioPerfil = true;
         } else {
-            displayProfileError("Perfil no disponible. Por favor, inicia sesión o especifica un perfil.");
+            // No hay queryUserId ni loggedInUserId, no se puede determinar qué perfil ver.
+            // Redirigir a la página de inicio/login o mostrar un error genérico.
+            // Por ahora, mostraremos un error y ocultaremos el enlace de "Mi Perfil".
+            displayProfileError("Perfil no disponible. Por favor, inicia sesión o especifica un perfil para ver.");
             if (sidebarMyProfileLinkContainer) sidebarMyProfileLinkContainer.style.display = 'none';
+            // Ocultar sección de Spotify si no se puede determinar el perfil
+            const spotifySection = document.getElementById('spotifyProfileSection');
+            if(spotifySection) spotifySection.style.display = 'none';
             return;
         }
-        
-        if (profileInfoActionsDiv) {
-            profileInfoActionsDiv.appendChild(followButtonContainer);
-        }
 
+        // Añadir botón de seguir/dejar de seguir (si no es mi perfil)
         if (profileInfoActionsDiv) {
-            // El editNameContainer está en el HTML, solo necesitamos el followButtonContainer
-            // Asegurémonos que followButtonContainer esté después de editNameContainer
-            if (editNameContainer && editNameContainer.parentNode === profileInfoActionsDiv) {
-                profileInfoActionsDiv.insertBefore(followButtonContainer, editNameContainer.nextSibling);
-            } else if (userProfileNameH1 && userProfileNameH1.parentNode === profileInfoActionsDiv) {
-                profileInfoActionsDiv.insertBefore(followButtonContainer, userProfileNameH1.nextSibling);
-            } else {
-                 profileInfoActionsDiv.appendChild(followButtonContainer);
+             // Asegurarse de que el botón de seguir/dejar de seguir y el contenedor de edición de nombre
+             // estén en el orden correcto y solo se muestren si es aplicable.
+            if (editNameContainer && userProfileNameH1 && followButtonContainer) {
+                // Colocar el editNameContainer (si existe) después del H1
+                if (userProfileNameH1.nextSibling !== editNameContainer) {
+                     userProfileNameH1.parentNode.insertBefore(editNameContainer, userProfileNameH1.nextSibling);
+                }
+                // Colocar el followButtonContainer después del editNameContainer
+                if (editNameContainer.nextSibling !== followButtonContainer) {
+                    editNameContainer.parentNode.insertBefore(followButtonContainer, editNameContainer.nextSibling);
+                }
+            } else if (userProfileNameH1 && followButtonContainer) { // Si no hay editNameContainer
+                if (userProfileNameH1.nextSibling !== followButtonContainer) {
+                    userProfileNameH1.parentNode.insertBefore(followButtonContainer, userProfileNameH1.nextSibling);
+                }
+            }
+            // Añadir listener al botón de seguir una vez que está en el DOM (o asegurarse de que ya lo tiene)
+            if (!followButton.onclick) { // Añadir solo si no existe ya
+                followButton.addEventListener('click', handleFollowToggle);
             }
         }
+
         updateSidebarMyProfileLink(viendoMiPropioPerfil);
-        loadUserProfileData(viewingUserId);
+        await loadUserProfileData(viewingUserId); // Esperar a que los datos se carguen
+
+        // Comprobar parámetros de Spotify después de cargar el perfil
+        const urlParamsOnLoad = new URLSearchParams(window.location.search);
+        const spotifyError = urlParamsOnLoad.get('spotify_error');
+        const spotifyLinked = urlParamsOnLoad.get('spotify_linked');
+
+        if (spotifyError) {
+            let message = "Ocurrió un error con la vinculación de Spotify.";
+            if (spotifyError === 'state_mismatch') message = "Error de validación de Spotify. Intenta de nuevo.";
+            else if (spotifyError === 'callback_failed') message = "Fallo en la comunicación con Spotify. Intenta de nuevo.";
+            else if (spotifyError === 'app_user_id_missing') message = "Error interno: Falta ID de usuario de la app. Contacta soporte.";
+            else if (spotifyError === 'spotify_account_already_linked_to_another_app_user') message = "Esa cuenta de Spotify ya está vinculada a otro usuario de esta aplicación.";
+            else if (spotifyError === 'access_denied') message = "No has concedido los permisos necesarios en Spotify.";
+            else message = `Error de Spotify: ${decodeURIComponent(spotifyError)}`;
+
+
+            if (spotifyStatusText) {
+                spotifyStatusText.textContent = message;
+                spotifyStatusText.style.color = 'var(--error-color)';
+                spotifyStatusText.style.display = 'block';
+            }
+            window.history.replaceState({}, document.title, `${window.location.pathname}?id=${viewingUserId}`);
+        } else if (spotifyLinked === 'true') {
+            if (spotifyStatusText) {
+                spotifyStatusText.textContent = "¡Cuenta de Spotify vinculada exitosamente! La información se está actualizando...";
+                spotifyStatusText.style.color = 'var(--success-color)';
+                spotifyStatusText.style.display = 'block';
+            }
+            // Los datos del perfil ya se deberían haber cargado, incluyendo los de Spotify si el callback funcionó
+            // setupSpotifySection(currentUserData) se llamará dentro de displayUserProfileData
+            window.history.replaceState({}, document.title, `${window.location.pathname}?id=${viewingUserId}`);
+        }
     }
 
 
     function displayProfileError(message) {
         if (userProfileNameH1) userProfileNameH1.textContent = "Error";
-        if (userFullDetailsDiv) userFullDetailsDiv.innerHTML = `<p class="error">${message}</p>`;
-        // Ocultar otros elementos
+        if (userFullDetailsDiv) userFullDetailsDiv.innerHTML = `<p class="error">${escapeHtml(message)}</p>`;
         if (document.querySelector('.profile-stats')) document.querySelector('.profile-stats').style.display = 'none';
-        if (followButtonContainer) followButtonContainer.innerHTML = '';
+        if (followButtonContainer) followButtonContainer.innerHTML = ''; // Limpiar botón de seguir
+        const spotifySection = document.getElementById('spotifyProfileSection');
+        if(spotifySection) spotifySection.style.display = 'none';
     }
 
     function updateSidebarMyProfileLink(esMiPerfil) {
@@ -123,11 +183,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const link = sidebarMyProfileLinkContainer.querySelector('a');
             if (esMiPerfil) {
                 sidebarMyProfileLinkContainer.style.display = 'list-item';
-                if (link) link.classList.add('active');
-                document.querySelectorAll('.sidebar ul > li > a:not([href="profile.html"])').forEach(a => a.classList.remove('active'));
+                if (link) {
+                    link.classList.add('active');
+                    link.href = `profile.html?id=${loggedInUserId}`; // Asegurar que siempre lleve a mi perfil
+                }
+                document.querySelectorAll('.sidebar ul > li > a:not([href^="profile.html"])').forEach(a => a.classList.remove('active'));
             } else {
-                sidebarMyProfileLinkContainer.style.display = 'none';
-                if (link) link.classList.remove('active'); 
+                // No ocultarlo necesariamente, sino quitarle el 'active' si estamos viendo el perfil de otro
+                // sidebarMyProfileLinkContainer.style.display = 'none';
+                if (link) link.classList.remove('active');
             }
         }
     }
@@ -135,32 +199,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     // CARGA Y VISUALIZACIÓN DE DATOS DEL PERFIL PRINCIPAL
     // =========================================================================
-    async function loadUserProfileData(userId) {
-        if (!userId) { console.error("loadUserProfileData: userId es nulo."); return; }
-
-        setPlaceholders(true); // Mostrar placeholders
+    async function loadUserProfileData(userIdToLoad) {
+        if (!userIdToLoad) {
+            console.error("loadUserProfileData: userIdToLoad es nulo.");
+            displayProfileError("No se especificó un ID de usuario para cargar el perfil.");
+            return;
+        }
+        setPlaceholders(true);
         try {
-            let fetchUrl = `${API_BASE_URL}/user/${encodeURIComponent(userId)}`;
-            if (loggedInUserId) fetchUrl += `?viewerId=${encodeURIComponent(loggedInUserId)}`;
+            let fetchUrl = `${API_BASE_URL}/user/${encodeURIComponent(userIdToLoad)}`;
+            if (loggedInUserId) { // Solo añadir viewerId si el usuario está logueado
+                fetchUrl += `?viewerId=${encodeURIComponent(loggedInUserId)}`;
+            }
 
             const response = await fetch(fetchUrl);
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
+                let errorMsg = `Error ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorData.error || errorMsg;
+                } catch (e) { /* No hacer nada si no es JSON */ }
+                throw new Error(errorMsg);
             }
             currentUserData = await response.json();
-            if (!currentUserData) throw new Error("Datos de usuario no recibidos de la API.");
-            
+            if (!currentUserData || !currentUserData.userId) { // Verificar que el userId exista en la respuesta
+                throw new Error("Datos de usuario no recibidos o incompletos de la API.");
+            }
             displayUserProfileData(currentUserData);
         } catch (error) {
-            console.error('Error cargando datos del perfil:', error);
+            console.error('Error cargando datos del perfil:', error.message, error);
             displayProfileError(`No se pudo cargar la información del perfil: ${error.message}`);
         } finally {
-            setPlaceholders(false); // Ocultar placeholders (o ya fueron reemplazados)
+            setPlaceholders(false);
         }
     }
 
     function setPlaceholders(isLoading) {
+        // ... (código de setPlaceholders sin cambios)
         if (isLoading) {
             if (userCoverPhotoElement) userCoverPhotoElement.src = 'placeholder-cover.jpg';
             if (userProfilePhotoElement) userProfilePhotoElement.src = 'placeholder-profile.jpg';
@@ -171,77 +246,238 @@ document.addEventListener('DOMContentLoaded', () => {
             if (userExperienceSpan) userExperienceSpan.textContent = '--';
             if (userFullDetailsDiv) userFullDetailsDiv.innerHTML = '<p>Cargando detalles...</p>';
             if (userProfileRankBadge) userProfileRankBadge.style.display = 'none';
+            if (spotifyStatusText) spotifyStatusText.textContent = 'Comprobando estado de Spotify...';
+            if (connectSpotifyButton) connectSpotifyButton.style.display = 'none';
+            if (disconnectSpotifyButton) disconnectSpotifyButton.style.display = 'none';
+            if (spotifyInfoDiv) spotifyInfoDiv.style.display = 'none';
+
         }
-        // No necesitamos una acción para "ocultar" placeholders si los datos los reemplazan.
     }
 
     function displayUserProfileData(user) {
+        // ... (lógica de displayUserProfileData sin cambios hasta la llamada a setupSpotifySection)
         if (!user) { displayProfileError("Datos de usuario no válidos."); return; }
         currentUserData = user; // Actualizar estado global
 
         document.title = `${escapeHtml(user.pushname) || 'Usuario'} - Perfil`;
         if (userProfileNameH1) {
             userProfileNameH1.textContent = escapeHtml(user.pushname) || 'Usuario Desconocido';
-            // Hacer el nombre clickeable para editar SOLO si es mi perfil
             if (loggedInUserId && user.userId === loggedInUserId) {
                 userProfileNameH1.classList.add('editable-name');
                 userProfileNameH1.title = "Haz clic para cambiar tu nombre";
+                if(editNameContainer) editNameContainer.style.display = 'none'; // Ocultar input de edición al cargar
             } else {
                 userProfileNameH1.classList.remove('editable-name');
                 userProfileNameH1.title = "";
+                if(editNameContainer) editNameContainer.style.display = 'none'; // Ocultar si no es mi perfil
             }
         }
-        
+
         if (userCoverPhotoElement) userCoverPhotoElement.src = user.coverPhotoPath || 'placeholder-cover.jpg';
         if (userProfilePhotoElement) userProfilePhotoElement.src = user.profilePhotoPath || 'placeholder-profile.jpg';
 
-        if (userFollowersSpan) userFollowersSpan.textContent = (user.followersCount || 0).toLocaleString();
-        if (userFollowingSpan) userFollowingSpan.textContent = (user.followingCount || 0).toLocaleString();
+        if (userFollowersSpan) userFollowersSpan.textContent = (user.followersCount === undefined ? '--' : (user.followersCount || 0).toLocaleString());
+        if (userFollowingSpan) userFollowingSpan.textContent = (user.followingCount === undefined ? '--' : (user.followingCount || 0).toLocaleString());
         if (userMoneyTotalSpan) userMoneyTotalSpan.textContent = `${FRONTEND_MONEY_SYMBOL}${((user.money || 0) + (user.bank || 0)).toLocaleString()}`;
-        if (userExperienceSpan) userExperienceSpan.textContent = (user.exp || 0).toLocaleString();
+        if (userExperienceSpan) userExperienceSpan.textContent = (user.exp === undefined ? '--' : (user.exp || 0).toLocaleString());
 
         updateFollowButtonState(user);
         updateRankBadge(user.rank);
         displayFullUserDetails(user);
 
-        // --- ACTUALIZAR LA FOTO DEL SIDEBAR ---
         if (loggedInUserId && user.userId === loggedInUserId) {
             if (window.updateGlobalUserUI) {
-                window.updateGlobalUserUI(user);
+                window.updateGlobalUserUI(user); // Actualiza sidebar/header
             }
         }
-
         makeImagesEditableIfMyProfile(user.userId === loggedInUserId);
+        console.log("[ProfileLoad] Datos del usuario recibidos del backend:", JSON.parse(JSON.stringify(user)));
+        setupSpotifySection(user); // <--- LLAMAR A LA FUNCIÓN DE SPOTIFY AQUÍ
     }
+
+    // --- Lógica de Spotify ---
+    function setupSpotifySection(userData) {
+        const spotifySection = document.getElementById('spotifyProfileSection');
+    
+        // Logs de depuración al inicio de la función
+        console.log("[SpotifyDebug] Entrando a setupSpotifySection. Viewing:", viewingUserId, "Logged In:", loggedInUserId);
+        console.log("[SpotifyDebug] userData recibida:", userData ? JSON.parse(JSON.stringify(userData)) : 'null o undefined');
+    
+        // Verificación única de que todos los elementos necesarios existen
+        if (!spotifySection || !connectSpotifyButton || !disconnectSpotifyButton || !spotifyStatusText || !spotifyInfoDiv || !spotifyDisplayNameSpan || !spotifyProfileImage) {
+            console.warn("[SpotifyDebug] Uno o más elementos de la sección Spotify NO fueron encontrados en el DOM. La sección podría no mostrarse o no funcionar correctamente.");
+            if (spotifySection) {
+                spotifySection.style.display = 'none'; // Ocultar si faltan elementos cruciales
+                spotifySection.classList.remove('visible');
+            }
+            return; // Salir si falta algún elemento esencial
+        }
+    
+        // Si todos los elementos existen, la clase .user-info-card ya debería manejar display:block.
+        // La visibilidad real (opacidad) será controlada por la clase .visible.
+    
+        if (!userData) {
+            console.log("[SpotifyDebug] userData es null o undefined. No se puede configurar la sección de Spotify.");
+            spotifyStatusText.textContent = 'No se pudieron cargar los datos del usuario para Spotify.';
+            spotifyStatusText.style.display = 'block';
+            connectSpotifyButton.style.display = 'none';
+            disconnectSpotifyButton.style.display = 'none';
+            spotifyInfoDiv.style.display = 'none';
+            spotifySection.classList.remove('visible'); // Asegurarse que no sea visible si no hay datos
+            return;
+        }
+    
+        const isMyProfile = viewingUserId === loggedInUserId;
+        console.log("[SpotifyDebug] isMyProfile:", isMyProfile);
+        // Asumimos que si userData.spotify_user_id existe (y no es null/undefined), está vinculado.
+        // Tu backend debería devolver null o no incluir la propiedad spotify_user_id si no hay vinculación.
+        const isLinkedToSpotify = !!userData.spotify_user_id;
+        console.log("[SpotifyDebug] isLinkedToSpotify (basado en userData.spotify_user_id):", isLinkedToSpotify, "(valor:", userData.spotify_user_id, ")");
+    
+    
+        if (isLinkedToSpotify) { // Usuario vinculado
+            console.log("[SpotifyDebug] Usuario vinculado a Spotify.");
+            spotifyStatusText.style.display = 'none'; // Ocultar texto de estado si está vinculado
+    
+            spotifyDisplayNameSpan.textContent = userData.spotify_display_name || 'Usuario de Spotify';
+            if (userData.spotify_profile_image_url) {
+                spotifyProfileImage.src = userData.spotify_profile_image_url;
+                spotifyProfileImage.style.display = 'block'; // O 'inline-block' si prefieres
+            } else {
+                spotifyProfileImage.style.display = 'none';
+            }
+            spotifyInfoDiv.style.display = 'block'; // O 'flex' si es un contenedor flex
+    
+            if (isMyProfile) {
+                console.log("[SpotifyDebug] Es mi perfil y está vinculado: Mostrar Desvincular.");
+                connectSpotifyButton.style.display = 'none';
+                disconnectSpotifyButton.style.display = 'inline-block';
+            } else {
+                console.log("[SpotifyDebug] Es perfil de otro y está vinculado: No mostrar botones de acción.");
+                connectSpotifyButton.style.display = 'none';
+                disconnectSpotifyButton.style.display = 'none';
+            }
+        } else { // Usuario NO vinculado
+            console.log("[SpotifyDebug] Usuario NO vinculado a Spotify.");
+            spotifyInfoDiv.style.display = 'none'; // Ocultar info de perfil de Spotify
+    
+            if (isMyProfile) {
+                console.log("[SpotifyDebug] Es mi perfil y NO está vinculado: Mostrar Conectar.");
+                spotifyStatusText.textContent = 'Vincula tu cuenta de Spotify para compartir tu música.';
+                spotifyStatusText.style.display = 'block';
+                connectSpotifyButton.style.display = 'inline-block'; // Mostrar el botón de conectar
+                disconnectSpotifyButton.style.display = 'none';
+            } else {
+                console.log("[SpotifyDebug] Es perfil de otro y NO está vinculado.");
+                spotifyStatusText.textContent = `${escapeHtml(userData.pushname || 'Este usuario')} no ha vinculado su Spotify.`;
+                spotifyStatusText.style.display = 'block';
+                connectSpotifyButton.style.display = 'none';
+                disconnectSpotifyButton.style.display = 'none';
+            }
+        }
+    
+        // Finalmente, después de configurar el contenido interno,
+        // hacer visible la sección de Spotify (esto activará la animación CSS)
+        spotifySection.classList.add('visible');
+    }
+    
+
+
+    if (connectSpotifyButton) {
+        connectSpotifyButton.addEventListener('click', () => {
+            if (loggedInUserId) {
+                window.location.href = `${API_BASE_URL}/spotify/login?app_user_id=${encodeURIComponent(loggedInUserId)}`;
+            } else {
+                alert("Debes iniciar sesión para vincular tu cuenta de Spotify.");
+                // Opcional: redirigir al login
+                // window.location.href = '/';
+            }
+        });
+    }
+
+    if (disconnectSpotifyButton) {
+        disconnectSpotifyButton.addEventListener('click', async () => {
+            if (loggedInUserId) {
+                if (!confirm("¿Estás seguro de que quieres desvincular tu cuenta de Spotify?")) {
+                    return;
+                }
+                disconnectSpotifyButton.disabled = true;
+                disconnectSpotifyButton.textContent = 'Desvinculando...';
+                try {
+                    const response = await fetch(`${API_BASE_URL}/spotify/unlink`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ app_user_id: loggedInUserId })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert(result.message || "Cuenta de Spotify desvinculada.");
+                        // Actualizar UI: recargar datos del perfil para reflejar desvinculación
+                        // O modificar currentUserData y llamar a setupSpotifySection
+                        if (currentUserData) {
+                            currentUserData.spotify_user_id = null;
+                            currentUserData.spotify_display_name = null;
+                            currentUserData.spotify_profile_image_url = null;
+                            // Actualizar localStorage si es el usuario logueado
+                             const storedUser = localStorage.getItem('loggedInUser');
+                             if(storedUser){
+                                 const parsedUser = JSON.parse(storedUser);
+                                 if(parsedUser.userId === loggedInUserId){
+                                     parsedUser.spotify_user_id = null; // Asumimos que estos campos están en el objeto del localStorage
+                                     parsedUser.spotify_display_name = null;
+                                     localStorage.setItem('loggedInUser', JSON.stringify(parsedUser));
+                                     if(window.updateGlobalUserUI) window.updateGlobalUserUI(parsedUser);
+                                 }
+                             }
+                            setupSpotifySection(currentUserData);
+                        }
+                    } else {
+                        alert(`Error: ${result.message || 'No se pudo desvincular.'}`);
+                    }
+                } catch (error) {
+                    console.error("Error desvinculando Spotify:", error);
+                    alert("Error de red al intentar desvincular Spotify.");
+                } finally {
+                    disconnectSpotifyButton.disabled = false;
+                    disconnectSpotifyButton.textContent = 'Desvincular Spotify';
+                }
+            }
+        });
+    }
+    // --- Fin Lógica de Spotify ---
+
+
+    // ... (resto del código de profile.js: toggleNameEditMode, listeners de nombre,
+    //      updateFollowButtonState, updateRankBadge, displayFullUserDetails,
+    //      makeImagesEditableIfMyProfile, handleFollowToggle,
+    //      lógica de modales, openImageEditModal, listeners de imagen,
+    //      funciones auxiliares escapeHtml, formatTimestamp) ...
+
+    // Copio el resto del código que me diste para que esté completo:
 
     function toggleNameEditMode(editMode) {
         isEditingName = editMode;
         if (editMode) {
             userProfileNameH1.style.display = 'none';
-            editNameContainer.style.display = 'flex'; // O 'block'
+            editNameContainer.style.display = 'flex';
             editNameInput.value = currentUserData ? (currentUserData.pushname || '') : '';
             editNameInput.focus();
             editNameStatus.style.display = 'none';
             editNameStatus.textContent = '';
-            // El followButtonContainer podría necesitar ajustarse si el H1 desaparece
             if (profileInfoActionsDiv && followButtonContainer.parentElement === profileInfoActionsDiv) {
                  profileInfoActionsDiv.insertBefore(editNameContainer, followButtonContainer);
             } else if (profileInfoActionsDiv) {
-                 profileInfoActionsDiv.appendChild(editNameContainer); // Si followButtonContainer no está o no es referencia
+                 profileInfoActionsDiv.appendChild(editNameContainer);
             }
-
-
         } else {
-            userProfileNameH1.style.display = 'block'; // O el display original del H1
+            userProfileNameH1.style.display = 'block';
             editNameContainer.style.display = 'none';
-             // Mover el followButtonContainer después del H1 si es necesario
              if (profileInfoActionsDiv && userProfileNameH1.nextSibling !== followButtonContainer) {
                 profileInfoActionsDiv.insertBefore(followButtonContainer, userProfileNameH1.nextSibling);
             }
         }
     }
 
-    // Event Listener para hacer el nombre H1 clickeable (si es editable)
     if (userProfileNameH1) {
         userProfileNameH1.addEventListener('click', () => {
             if (loggedInUserId && viewingUserId === loggedInUserId && !isEditingName) {
@@ -250,11 +486,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event Listener para el botón Guardar Nombre
     if (saveNameButton) {
         saveNameButton.addEventListener('click', async () => {
             const newName = editNameInput.value.trim();
-            
             editNameInput.classList.remove('input-error-pulse');
             editNameStatus.style.display = 'none';
             editNameStatus.textContent = '';
@@ -263,26 +497,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (newName.length < 3 || newName.length > 25) {
                 editNameStatus.textContent = "El nombre debe tener entre 3 y 25 caracteres.";
                 editNameStatus.className = 'message-area error visible';
-                editNameStatus.style.display = 'block';
                 editNameInput.classList.add('input-error-pulse');
                 editNameInput.focus();
-                setTimeout(() => { editNameInput.classList.remove('input-error-pulse'); }, 2000);
+                setTimeout(() => { editNameInput.classList.remove('input-error-pulse'); }, 1500);
                 return;
             }
-            // (Puedes añadir otra validación para newName vacío si quieres, aunque la de longitud lo cubre si min > 0)
-
             if (currentUserData && newName === currentUserData.pushname) {
-                toggleNameEditMode(false);
-                return;
+                toggleNameEditMode(false); return;
             }
-
-            saveNameButton.disabled = true;
-            saveNameButton.textContent = 'Guardando...';
-            editNameStatus.textContent = 'Guardando nombre...';
-            editNameStatus.className = 'message-area visible'; // Mostrar mensaje
+            saveNameButton.disabled = true; saveNameButton.textContent = 'Guardando...';
+            editNameStatus.textContent = 'Guardando nombre...'; editNameStatus.className = 'message-area visible';
             editNameStatus.classList.remove('success', 'error');
-
-
             try {
                 const response = await fetch(`${API_BASE_URL}/user/update-name`, {
                     method: 'PUT',
@@ -290,78 +515,45 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ newName: newName, userId: loggedInUserId })
                 });
                 const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.message || 'Error al actualizar el nombre.');
-                }
-
-                editNameStatus.textContent = result.message;
-                editNameStatus.classList.add('success');
-
+                if (!response.ok) throw new Error(result.message || 'Error al actualizar.');
+                editNameStatus.textContent = result.message; editNameStatus.classList.add('success');
                 if (currentUserData) {
                     currentUserData.pushname = newName;
                     localStorage.setItem('loggedInUser', JSON.stringify(currentUserData));
-                    if (window.updateGlobalUserUI) {
-                        window.updateGlobalUserUI(currentUserData);
-                    }
-                    displayUserProfileData(currentUserData); // Actualiza H1 y otros elementos del perfil
+                    if (window.updateGlobalUserUI) window.updateGlobalUserUI(currentUserData);
+                    displayUserProfileData(currentUserData);
                 }
-                
-                // Revertir estado del botón ANTES de ocultar el contenedor con toggleNameEditMode
-                saveNameButton.disabled = false;
-                saveNameButton.textContent = 'Guardar';
-
-                setTimeout(() => {
-                    toggleNameEditMode(false); // Ahora esto solo se encarga de la visibilidad
-                }, 1500); // Retraso para que el usuario vea el mensaje de éxito
-
+                saveNameButton.disabled = false; saveNameButton.textContent = 'Guardar';
+                setTimeout(() => toggleNameEditMode(false), 1500);
             } catch (error) {
                 console.error("Error actualizando nombre:", error);
                 editNameStatus.textContent = `Error: ${error.message}`;
                 editNameStatus.classList.add('error');
-                
-                // REVERTIR ESTADO DEL BOTÓN EN CASO DE ERROR
-                saveNameButton.disabled = false;
-                saveNameButton.textContent = 'Guardar';
-            } 
-            // No se necesita un 'finally' aquí si ambos caminos (try y catch)
-            // manejan explícitamente el estado del botón.
-        });
-    }
-    
-    // Permitir guardar con Enter en el input
-    if(editNameInput) {
-        editNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && isEditingName) {
-                e.preventDefault();
-                saveNameButton.click();
+                saveNameButton.disabled = false; saveNameButton.textContent = 'Guardar';
             }
         });
     }
-
-
-    // Event Listener para el botón Cancelar Edición de Nombre
-    if (cancelEditNameButton) {
-        cancelEditNameButton.addEventListener('click', () => {
-            toggleNameEditMode(false);
+    if(editNameInput) {
+        editNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && isEditingName) { e.preventDefault(); saveNameButton.click(); }
         });
     }
-
-
+    if (cancelEditNameButton) {
+        cancelEditNameButton.addEventListener('click', () => toggleNameEditMode(false));
+    }
 
     function updateFollowButtonState(user) {
-        followButtonContainer.innerHTML = ''; // Limpiar para evitar duplicados
-        if (loggedInUserId && viewingUserId !== loggedInUserId) {
+        followButtonContainer.innerHTML = '';
+        if (loggedInUserId && viewingUserId !== loggedInUserId && user) { // Añadido chequeo de user
             followButton.textContent = user.isFollowing ? 'Dejar de Seguir' : 'Seguir';
             followButton.className = user.isFollowing ? 'button-unfollow' : 'button-follow';
             followButtonContainer.appendChild(followButton);
             followButton.style.display = 'inline-block';
             followButton.disabled = false;
         } else {
-            // No mostrar botón si es mi perfil o no estoy logueado
+            followButton.style.display = 'none'; // Ocultar si es mi perfil o no hay datos
         }
     }
-    
     function updateRankBadge(rank) {
         if (userProfileRankBadge) {
             if (rank !== null && rank !== undefined) {
@@ -374,122 +566,107 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function displayFullUserDetails(user) {
-        if (userFullDetailsDiv) {
-            console.log("Datos para displayFullUserDetails:", user); // LOG GENERAL DEL USUARIO
-            console.log("Valor de user.lastdaily:", user.lastdaily, "| Tipo:", typeof user.lastdaily);
-            console.log("Valor de user.lastwork:", user.lastwork, "| Tipo:", typeof user.lastwork);
-            // Y así para cualquier otro campo de fecha que dé problemas
-    
-            let detailsHTML = `<h4>Más sobre ${escapeHtml(user.pushname)}:</h4>`;
+        if (userFullDetailsDiv && user) { // Añadido chequeo de user
+            let detailsHTML = `<h4>Más sobre ${escapeHtml(user.pushname || 'este usuario')}:</h4>`;
             detailsHTML += `<p><strong>ID:</strong> ${escapeHtml(user.userId)}</p>`;
-            detailsHTML += `<p><strong>Últ. Daily:</strong> ${formatTimestamp(user.lastdaily)}</p>`; // Aquí se usa
+            detailsHTML += `<p><strong>Últ. Daily:</strong> ${formatTimestamp(user.lastdaily)}</p>`;
             detailsHTML += `<p><strong>Racha Daily:</strong> ${user.dailystreak || 0} día(s)</p>`;
-            detailsHTML += `<p><strong>Últ. Trabajo:</strong> ${formatTimestamp(user.lastwork)}</p>`; // Y aquí
-            // ... más detalles ...
+            detailsHTML += `<p><strong>Últ. Trabajo:</strong> ${formatTimestamp(user.lastwork)}</p>`;
+            detailsHTML += `<p><strong>Últ. Robo:</strong> ${formatTimestamp(user.laststeal)}</p>`;
+            detailsHTML += `<p><strong>Últ. Crimen:</strong> ${formatTimestamp(user.lastcrime)}</p>`;
+            detailsHTML += `<p><strong>Últ. "Cita":</strong> ${formatTimestamp(user.lastslut)}</p>`;
+            detailsHTML += `<p><strong>Últ. Ruleta:</strong> ${formatTimestamp(user.lastroulette)}</p>`;
+            detailsHTML += `<p><strong>Últ. Slots:</strong> ${formatTimestamp(user.lastslots)}</p>`;
+
             userFullDetailsDiv.innerHTML = detailsHTML;
             userFullDetailsDiv.classList.add('visible');
+        } else if (userFullDetailsDiv) {
+            userFullDetailsDiv.innerHTML = '<p>No hay detalles adicionales para mostrar.</p>';
         }
     }
 
     function makeImagesEditableIfMyProfile(isMyProfile) {
         const coverPhotoContainer = userCoverPhotoElement ? userCoverPhotoElement.parentElement : null;
         const profilePhotoContainer = userProfilePhotoElement ? userProfilePhotoElement.parentElement : null;
-
         [coverPhotoContainer, profilePhotoContainer].forEach(container => {
             if (container) {
                 if (isMyProfile) {
                     container.classList.add('editable');
                     container.title = `Cambiar foto de ${container === coverPhotoContainer ? 'portada' : 'perfil'}`;
-                    container.onclick = () => { // Usar onclick para reemplazar listeners anteriores si los hubiera
+                    container.onclick = () => {
                         const imageType = container === coverPhotoContainer ? 'cover' : 'profile';
-                        const currentImage = imageType === 'cover' ? 
-                            (currentUserData.coverPhotoPath || 'placeholder-cover.jpg') : 
-                            (currentUserData.profilePhotoPath || 'placeholder-profile.jpg');
+                        const currentImage = imageType === 'cover' ?
+                            (currentUserData?.coverPhotoPath || 'placeholder-cover.jpg') :
+                            (currentUserData?.profilePhotoPath || 'placeholder-profile.jpg');
                         openImageEditModal(imageType, currentImage);
                     };
                 } else {
-                    container.classList.remove('editable');
-                    container.title = "";
-                    container.onclick = null; // Quitar listener
+                    container.classList.remove('editable'); container.title = ""; container.onclick = null;
                 }
             }
         });
     }
 
-    // =========================================================================
-    // LÓGICA DEL BOTÓN SEGUIR/DEJAR DE SEGUIR (PRINCIPAL)
-    // =========================================================================
     async function handleFollowToggle() {
         if (!loggedInUserId || !viewingUserId || loggedInUserId === viewingUserId || !currentUserData) return;
-
         const currentlyFollowing = currentUserData.isFollowing;
         const action = currentlyFollowing ? 'unfollow' : 'follow';
-        
-        followButton.disabled = true;
-        followButton.textContent = 'Procesando...';
-
+        followButton.disabled = true; followButton.textContent = 'Procesando...';
         try {
             const response = await fetch(`${API_BASE_URL}/user/${viewingUserId}/${action}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ followerId: loggedInUserId }) 
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ followerId: loggedInUserId })
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `Error al ${action} usuario.`);
-            }
-            // const result = await response.json(); // Mensaje de éxito
-            
-            // Actualización optimista y re-renderizado parcial
+            if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || `Error al ${action}`);}
             currentUserData.isFollowing = !currentlyFollowing;
-            if (userFollowersSpan) { // El contador de seguidores del PERFIL VISTO cambia
-                 currentUserData.followersCount += (!currentlyFollowing ? 1 : -1);
+            if (userFollowersSpan) {
+                 currentUserData.followersCount = (currentUserData.followersCount || 0) + (!currentlyFollowing ? 1 : -1);
                  if(currentUserData.followersCount < 0) currentUserData.followersCount = 0;
             }
-            displayUserProfileData(currentUserData); // Esto actualiza el botón y contadores
-
+            // Para el usuario logueado, si es el que está viendo su propio perfil (aunque este botón no debería mostrarse)
+            // o si necesitamos actualizar el contador de "siguiendo" del usuario logueado globalmente.
+            const storedUserRaw = localStorage.getItem('loggedInUser');
+            if(storedUserRaw){
+                const storedUser = JSON.parse(storedUserRaw);
+                if(storedUser.userId === loggedInUserId){
+                    storedUser.followingCount = (storedUser.followingCount || 0) + (!currentlyFollowing ? 1 : -1);
+                    if(storedUser.followingCount < 0) storedUser.followingCount = 0;
+                    localStorage.setItem('loggedInUser', JSON.stringify(storedUser));
+                    if(window.updateGlobalUserUI) window.updateGlobalUserUI(storedUser);
+                }
+            }
+            displayUserProfileData(currentUserData);
         } catch (error) {
-            console.error(`Error en acción ${action}:`, error);
-            alert(`Error: ${error.message}`);
-            loadUserProfileData(viewingUserId); // Recargar en caso de error para estado consistente
+            console.error(`Error en acción ${action}:`, error); alert(`Error: ${error.message}`);
+            loadUserProfileData(viewingUserId);
         }
     }
 
-    // =========================================================================
-    // LÓGICA DEL MODAL DE LISTA DE SEGUIDORES/SIGUIENDO
-    // =========================================================================
     function openFollowListModal(tabToOpen = 'followers') {
         if (!followListModal || !viewingUserId) return;
-        userIdForModalList = viewingUserId;
-        currentModalTab = tabToOpen;
-        updateModalTabsUI();
-        loadUsersForModalList(currentModalTab);
-        
+        userIdForModalList = viewingUserId; currentModalTab = tabToOpen;
+        updateModalTabsUI(); loadUsersForModalList(currentModalTab);
         followListModal.style.display = 'flex';
         setTimeout(() => { followListModal.classList.add('visible'); document.body.classList.add('modal-open-no-scroll'); }, 10);
     }
-
-    function closeModal(modalElement) { // Generalizada para cualquier modal
+    function closeModal(modalElement) {
         if (!modalElement) return;
-        modalElement.classList.remove('visible');
-        document.body.classList.remove('modal-open-no-scroll');
-        setTimeout(() => {
-            if (!modalElement.classList.contains('visible')) modalElement.style.display = 'none';
+        modalElement.classList.remove('visible'); document.body.classList.remove('modal-open-no-scroll');
+        setTimeout(() => { if (!modalElement.classList.contains('visible')) modalElement.style.display = 'none';
         }, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--transition-speed-normal') || '0.3') * 1000);
     }
-
     function updateModalTabsUI() {
         if (!tabFollowersButton || !tabFollowingButton) return;
         tabFollowersButton.classList.toggle('active', currentModalTab === 'followers');
         tabFollowingButton.classList.toggle('active', currentModalTab === 'following');
     }
-
     async function loadUsersForModalList(tabName) {
+        // ... (código de loadUsersForModalList sin cambios)
         if (!modalUserListContainer || !userIdForModalList) return;
         modalUserListContainer.innerHTML = '<p>Cargando...</p>';
         const endpoint = tabName === 'followers' ? 'followers' : 'following';
         try {
-            const fetchUrl = loggedInUserId 
+            const fetchUrl = loggedInUserId
                 ? `${API_BASE_URL}/user/${userIdForModalList}/${endpoint}?viewerId=${loggedInUserId}`
                 : `${API_BASE_URL}/user/${userIdForModalList}/${endpoint}`;
             const response = await fetch(fetchUrl);
@@ -501,9 +678,8 @@ document.addEventListener('DOMContentLoaded', () => {
             modalUserListContainer.innerHTML = `<p class="error">No se pudo cargar la lista: ${error.message}</p>`;
         }
     }
-
     function renderUserListInModal(users, tabType) {
-        // ... (misma lógica de renderUserListInModal que tenías, con los botones de acción) ...
+        // ... (código de renderUserListInModal sin cambios)
         if (!modalUserListContainer) return;
         if (!users || users.length === 0) {
             modalUserListContainer.innerHTML = `<p>No hay ${tabType === 'followers' ? 'seguidores' : 'usuarios seguidos'} para mostrar.</p>`;
@@ -517,11 +693,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let actionButtonHtml = '';
             if (loggedInUserId) {
                 if (loggedInUserId === userInList.userId) { /* No action for self */ }
-                else if (tabType === 'following' && userIdForModalList === loggedInUserId) {
+                else if (tabType === 'following' && userIdForModalList === loggedInUserId) { // Estoy viendo mi lista de "siguiendo"
                     actionButtonHtml = `<button class="follow-action-btn button-unfollow" data-action="unfollow" data-target-userId="${userInList.userId}">Dejar de seguir</button>`;
-                } else if (tabType === 'followers' && userIdForModalList === loggedInUserId) {
+                } else if (tabType === 'followers' && userIdForModalList === loggedInUserId) { // Estoy viendo mi lista de "seguidores"
                     actionButtonHtml = `<button class="follow-action-btn button-remove-follower" data-action="remove-follower" data-target-userId="${userInList.userId}">Eliminar</button>`;
-                } else if (userIdForModalList !== loggedInUserId) {
+                } else if (userIdForModalList !== loggedInUserId && userInList.isFollowedByViewer !== undefined) { // Estoy viendo el perfil de otro, y sé si sigo a esta persona de la lista
                     actionButtonHtml = userInList.isFollowedByViewer ?
                         `<button class="follow-action-btn button-unfollow" data-action="unfollow" data-target-userId="${userInList.userId}">Dejar de seguir</button>` :
                         `<button class="follow-action-btn button-follow" data-action="follow" data-target-userId="${userInList.userId}">Seguir</button>`;
@@ -536,8 +712,6 @@ document.addEventListener('DOMContentLoaded', () => {
         modalUserListContainer.innerHTML = '';
         modalUserListContainer.appendChild(ul);
     }
-    
-    // Event Listeners para el Modal de Lista
     if (userFollowersSpan && userFollowersSpan.parentElement) userFollowersSpan.parentElement.addEventListener('click', () => openFollowListModal('followers'));
     if (userFollowingSpan && userFollowingSpan.parentElement) userFollowingSpan.parentElement.addEventListener('click', () => openFollowListModal('following'));
     if (closeFollowListModalButton) closeFollowListModalButton.addEventListener('click', () => closeModal(followListModal));
@@ -547,18 +721,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (modalUserListContainer) {
         modalUserListContainer.addEventListener('click', async (event) => {
-            // ... (misma lógica para manejar clics en botones de acción y nombres de usuario dentro del modal)
+            // ... (código del listener de modalUserListContainer sin cambios)
             const actionButton = event.target.closest('.follow-action-btn[data-action]');
             const usernameLink = event.target.closest('.username[data-user-id-link]');
 
-            if (usernameLink) { /* ... ir al perfil ... */ closeModal(followListModal); window.location.href = `profile.html?id=${encodeURIComponent(usernameLink.dataset.userIdLink)}`; return; }
+            if (usernameLink) { closeModal(followListModal); window.location.href = `profile.html?id=${encodeURIComponent(usernameLink.dataset.userIdLink)}`; return; }
 
             if (actionButton && loggedInUserId) {
                 const targetUserId = actionButton.dataset.targetUserid;
                 const action = actionButton.dataset.action;
                 if (!targetUserId || !action) return;
 
-                // ... (lógica fetch para la acción, similar a handleFollowToggle pero para el modal) ...
                 const originalButtonText = actionButton.textContent;
                 actionButton.disabled = true; actionButton.textContent = '...';
                 let apiUrl = '', body = {}, method = 'POST';
@@ -572,8 +745,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch(apiUrl, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                     if (!response.ok) { const errData = await response.json(); throw new Error(errData.message || `Error: ${action}`); }
                     
-                    loadUsersForModalList(currentModalTab); // Recargar lista del modal
-                    loadUserProfileData(viewingUserId);   // Recargar datos del perfil principal
+                    loadUsersForModalList(currentModalTab);
+                    loadUserProfileData(viewingUserId); // Esto actualiza el perfil principal y los contadores
                 } catch (error) {
                     console.error(`Error en ${action} desde modal:`, error); alert(`Error: ${error.message}`);
                     actionButton.textContent = originalButtonText; actionButton.disabled = false;
@@ -582,10 +755,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // =========================================================================
-    // LÓGICA DEL MODAL DE EDICIÓN DE IMAGEN
-    // =========================================================================
     function openImageEditModal(imageType, currentImageUrl) {
+        // ... (código de openImageEditModal sin cambios)
         if (!imageEditModal || !loggedInUserId || viewingUserId !== loggedInUserId) return;
         currentImageTypeToEdit = imageType; selectedFile = null; imageUploadInput.value = '';
         imageEditModalTitle.textContent = imageType === 'profile' ? 'Cambiar Foto de Perfil' : 'Cambiar Foto de Portada';
@@ -595,13 +766,12 @@ document.addEventListener('DOMContentLoaded', () => {
         imageEditModal.style.display = 'flex';
         setTimeout(() => { imageEditModal.classList.add('visible'); document.body.classList.add('modal-open-no-scroll'); }, 10);
     }
-
     if (closeImageEditModalButton) closeImageEditModalButton.addEventListener('click', () => closeModal(imageEditModal));
     if (imageEditModal) imageEditModal.addEventListener('click', (e) => { if (e.target === imageEditModal) closeModal(imageEditModal); });
     if (triggerImageUploadButton) triggerImageUploadButton.addEventListener('click', () => imageUploadInput.click());
-
     if (imageUploadInput) {
         imageUploadInput.addEventListener('change', (event) => {
+            // ... (código del listener de imageUploadInput sin cambios)
             const file = event.target.files[0];
             if (file) {
                 selectedFile = file;
@@ -612,148 +782,90 @@ document.addEventListener('DOMContentLoaded', () => {
                 uploadStatusMessage.style.display = 'none';
             } else {
                 selectedFile = null;
-                imageEditPreview.src = currentUserData[currentImageTypeToEdit === 'profile' ? 'profilePhotoPath' : 'coverPhotoPath'] || (currentImageTypeToEdit === 'profile' ? 'placeholder-profile.jpg' : 'placeholder-cover.jpg');
+                const currentPath = currentUserData ? 
+                    (currentImageTypeToEdit === 'profile' ? currentUserData.profilePhotoPath : currentUserData.coverPhotoPath) 
+                    : null;
+                imageEditPreview.src = currentPath || (currentImageTypeToEdit === 'profile' ? 'placeholder-profile.jpg' : 'placeholder-cover.jpg');
                 saveImageButton.style.display = 'none';
             }
         });
     }
-
     if (saveImageButton) {
         saveImageButton.addEventListener('click', async () => {
+            // ... (código del listener de saveImageButton sin cambios)
             if (!selectedFile || !currentImageTypeToEdit || !loggedInUserId) {
-                console.warn("Condiciones no cumplidas para guardar imagen: archivo, tipo de imagen o usuario no definidos.");
                 uploadStatusMessage.textContent = 'Por favor, selecciona un archivo primero.';
-                uploadStatusMessage.className = 'message-area error visible';
-                return;
+                uploadStatusMessage.className = 'message-area error visible'; return;
             }
-
-            saveImageButton.disabled = true;
-            saveImageButton.textContent = 'Subiendo...';
+            saveImageButton.disabled = true; saveImageButton.textContent = 'Subiendo...';
             uploadStatusMessage.textContent = 'Subiendo imagen...';
-            uploadStatusMessage.className = 'message-area visible'; // Mostrar mensaje
-            uploadStatusMessage.classList.remove('success', 'error'); // Limpiar clases de estado previas
-
+            uploadStatusMessage.className = 'message-area visible';
+            uploadStatusMessage.classList.remove('success', 'error');
             const formData = new FormData();
-            // El nombre del campo ('profileImage' o 'coverImage') debe coincidir con lo que espera multer en el backend
             formData.append(currentImageTypeToEdit === 'profile' ? 'profileImage' : 'coverImage', selectedFile);
-            // ¡IMPORTANTE! En producción, el userId debe venir de una sesión/token autenticado en el backend,
-            // no enviado desde el cliente de esta manera, ya que es inseguro.
-            formData.append('userId', loggedInUserId); 
-
+            formData.append('userId', loggedInUserId);
             const endpointSuffix = currentImageTypeToEdit === 'profile' ? '/upload/profile-photo' : '/upload/cover-photo';
-
             try {
-                const response = await fetch(`${API_BASE_URL}/user${endpointSuffix}`, {
-                    method: 'POST',
-                    body: formData,
-                    // No establecer 'Content-Type': 'multipart/form-data' manualmente. 
-                    // El navegador lo hace automáticamente con el boundary correcto para FormData.
-                    // headers: { 'Authorization': `Bearer ${getToken()}` } // Si usaras tokens JWT
-                });
-
-                const result = await response.json(); // Intentar parsear la respuesta como JSON
-
-                if (!response.ok) {
-                    // Si la respuesta no es ok, result.message debería tener el mensaje de error del backend
-                    throw new Error(result.message || `Error del servidor: ${response.status}`);
-                }
-
+                const response = await fetch(`${API_BASE_URL}/user${endpointSuffix}`, { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || `Error del servidor: ${response.status}`);
                 uploadStatusMessage.textContent = result.message || "Imagen subida con éxito.";
                 uploadStatusMessage.classList.add('success');
-
-                // Actualizar la UI con la nueva ruta de la imagen y el localStorage
-                if (currentUserData) { // Asegurarse que currentUserData existe
+                if (currentUserData) {
                     const pathFieldToUpdate = currentImageTypeToEdit === 'profile' ? 'profilePhotoPath' : 'coverPhotoPath';
-                    currentUserData[pathFieldToUpdate] = result.filePath; // Actualizar el path en nuestro objeto local
-
-                    // Actualizar localStorage solo si estamos editando nuestro propio perfil
+                    currentUserData[pathFieldToUpdate] = result.filePath;
                     if (loggedInUserId && viewingUserId === loggedInUserId) {
                         localStorage.setItem('loggedInUser', JSON.stringify(currentUserData));
-                         // LLAMAR A LA FUNCIÓN GLOBAL PARA ACTUALIZAR OTRAS PESTAÑAS Y EL SIDEBAR ACTUAL
-                         if (window.updateGlobalUserUI) {
-                            window.updateGlobalUserUI(currentUserData);
-                        }
+                        if (window.updateGlobalUserUI) window.updateGlobalUserUI(currentUserData);
                     }
-                    
-                    
-                    // Volver a renderizar el perfil principal para que muestre la nueva imagen
-                    // Esto también actualizará la imagen del sidebar si displayUserProfileData lo maneja.
-                    displayUserProfileData(currentUserData); 
+                    displayUserProfileData(currentUserData);
                 }
-                
-                setTimeout(() => { 
+                setTimeout(() => {
                     closeModal(imageEditModal);
-                    // Resetear el botón de guardar y el mensaje después de cerrar
-                    saveImageButton.textContent = 'Guardar Cambios';
-                    saveImageButton.style.display = 'none'; // Ocultar hasta que se seleccione nuevo archivo
-                    selectedFile = null;
-                    imageUploadInput.value = ''; // Resetear el input de archivo
-                }, 2000); // Cerrar modal después de 2 segundos
-
+                    saveImageButton.textContent = 'Guardar Cambios'; saveImageButton.style.display = 'none';
+                    selectedFile = null; imageUploadInput.value = '';
+                }, 1500);
             } catch (error) {
                 console.error("Error subiendo imagen:", error);
                 uploadStatusMessage.textContent = `Error: ${error.message}`;
                 uploadStatusMessage.classList.add('error');
-                saveImageButton.disabled = false; // Re-habilitar para reintentar
-                saveImageButton.textContent = 'Guardar Cambios';
-            } 
-            // No es necesario un finally para re-habilitar el botón si el flujo de éxito/error lo maneja
-            // o si el modal se cierra y el botón se resetea.
+                saveImageButton.disabled = false; saveImageButton.textContent = 'Guardar Cambios';
+            }
         });
     }
-    
+
     // --- Funciones Auxiliares ---
     function escapeHtml(unsafe) { if (unsafe === null || typeof unsafe === 'undefined') return ''; return String(unsafe).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, ".").replace(/'/g, "'"); }
     function formatTimestamp(timestamp) {
-        console.log("[formatTimestamp] Valor de entrada:", timestamp, "| Tipo:", typeof timestamp); // Log inicial
-    
-        if (timestamp === null || timestamp === undefined || timestamp === 0 || timestamp === '') {
-            console.log("[formatTimestamp] Devolviendo 'Nunca' por valor nulo/vacío/cero.");
+        if (timestamp === null || typeof timestamp === 'undefined' || timestamp === 0 || timestamp === '') {
             return 'Nunca';
         }
-    
         let dateObj;
-    
         if (typeof timestamp === 'number') {
-            console.log("[formatTimestamp] Es tipo número.");
             dateObj = new Date(timestamp);
-        } 
-        else if (typeof timestamp === 'string') {
-            console.log("[formatTimestamp] Es tipo string.");
+        } else if (typeof timestamp === 'string') {
             const numericTimestamp = Number(timestamp);
-            console.log("[formatTimestamp] String convertida a número:", numericTimestamp, "| es NaN?:", isNaN(numericTimestamp));
-    
-            if (!isNaN(numericTimestamp) && String(numericTimestamp) === timestamp.trim()) { // Añadido .trim() por si acaso
-                console.log("[formatTimestamp] Es una cadena numérica válida. Usando el valor numérico.");
+            if (!isNaN(numericTimestamp) && String(numericTimestamp) === timestamp.trim()) {
                 dateObj = new Date(numericTimestamp);
             } else {
-                console.log("[formatTimestamp] No es una cadena puramente numérica o la conversión falló. Intentando parsear string directamente.");
-                dateObj = new Date(timestamp);
+                dateObj = new Date(timestamp); // Intentar parsear la cadena directamente
             }
-        } 
-        else {
-            console.warn("[formatTimestamp] Tipo de timestamp no reconocido:", timestamp, typeof timestamp);
+        } else {
             return 'Fecha no válida (tipo)';
         }
-    
-        console.log("[formatTimestamp] Objeto Date antes de chequeo de validez:", dateObj);
-    
-        if (!dateObj || isNaN(dateObj.getTime())) { // Añadido chequeo por si dateObj es undefined
-            console.warn("[formatTimestamp] El valor resultó en 'Invalid Date'. Original:", timestamp, "| dateObj:", dateObj);
+        if (!dateObj || isNaN(dateObj.getTime())) {
             return 'Fecha inválida';
         }
-    
-        console.log("[formatTimestamp] Fecha válida. Formateando:", dateObj);
         try {
-            return dateObj.toLocaleString('es-ES', { 
-                day: '2-digit', month: '2-digit', year: 'numeric', 
-                hour: '2-digit', minute: '2-digit',
+            return dateObj.toLocaleString('es-ES', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
             });
         } catch (e) {
-            console.error("[formatTimestamp] Error formateando la fecha:", e, dateObj);
             return 'Error al formatear';
         }
     }
+
     // --- INICIAR LA PÁGINA ---
     initializeProfilePage();
 });

@@ -5,7 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estadísticas del Bot</title>
+    <link rel="stylesheet" href="themes.css">
     <link rel="stylesheet" href="style.css">
+    <script src="loadtheme.js"></script>
+
 </head>
 
 <body>
@@ -49,6 +52,13 @@
             <div class="sidebar-profile" id="sidebarProfileInfo" style="display: none;">
                 <img src="placeholder-profile.jpg" alt="Foto de perfil" id="sidebarProfilePic" class="profile-pic">
                 <span id="sidebarProfileName" class="profile-name">Usuario</span>
+            </div>
+            <!-- Selector de Tema en el Sidebar -->
+            <div class="theme-selector-sidebar">
+                <label for="themeSelect" class="theme-select-label">Tema:</label>
+                <select id="themeSelect">
+                    <!-- Opciones se añadirán con JS -->
+                </select>
             </div>
             <ul>
                 <li><a href="index.html" class="active">📊 Estadísticas</a></li>
