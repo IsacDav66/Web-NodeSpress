@@ -21,6 +21,7 @@ const logRoutes = require('./routes/logs');
 const spotifyRoutes = require('./routes/spotify'); // Este router seguirá existiendo
                                                 // por si quieres un endpoint HTTP para obtener la actividad una vez.
                                                 // O podemos mover la lógica de fetch de Spotify a una función reutilizable.
+const postsRoutes = require('./routes/posts'); // <--- AÑADIR
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
@@ -38,6 +39,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/spotify', spotifyRoutes); // Mantenemos el router HTTP por ahora
+app.use('/api/posts', postsRoutes); // <--- AÑADIR
 
 
 // --- ENDPOINT DE TRADUCCIÓN (MODIFICADO CON FORZADO) ---

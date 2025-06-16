@@ -1,0 +1,462 @@
+/* ==========================================================================
+   PUBLICACIONES - GENERAL Y FEED PRINCIPAL (publicaciones.html)
+   ========================================================================== */
+
+   .create-post-section {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+#openCreatePostModalBtn {
+    padding: 10px 20px;
+    font-size: 1em;
+    /* display: inline-flex; alineación de icono y texto ya lo hace el botón general */
+}
+#openCreatePostModalBtn svg {
+    transition: transform 0.2s ease-in-out;
+}
+#openCreatePostModalBtn:hover svg {
+    transform: rotate(90deg);
+}
+
+.posts-feed { /* Usado en publicaciones.html y dentro de las pestañas del perfil */
+    max-width: 700px; /* Ancho máximo para el feed principal */
+    margin: 0 auto;   /* Centrar el feed principal */
+}
+
+/* ==========================================================================
+   ESTILOS DE LA TARJETA DE PUBLICACIÓN (POST-CARD)
+   ========================================================================== */
+
+.post-card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 25px;
+    padding: 15px 20px;
+    transition: background-color var(--transition-speed-normal) ease, border-color var(--transition-speed-normal) ease;
+    text-align: left; /* Asegura que el contenido interno se alinee a la izquierda por defecto */
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    position: relative; /* Para posicionar el botón de eliminar absolutamente dentro de él */
+}
+
+.post-author-pic {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 12px;
+    border: 1px solid var(--border-color); /* Para consistencia con otros elementos */
+}
+
+.post-author-info .author-name {
+    font-weight: 600;
+    color: var(--text-color);
+    text-decoration: none;
+}
+.post-author-info .author-name:hover {
+    text-decoration: underline;
+    color: var(--accent-color);
+}
+.post-author-info .post-timestamp {
+    font-size: 0.8em;
+    color: var(--text-secondary-color);
+}
+
+.post-content p {
+    color: var(--text-color);
+    line-height: 1.6;
+    margin-top: 0; /* Quitar margen superior si es el primer elemento después del header */
+    margin-bottom: 15px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.post-image-container {
+    margin-top: 10px; /* Espacio si hay texto arriba */
+    margin-bottom: 15px;
+    max-height: 450px; /* Ajustar según preferencia */
+    overflow: hidden;
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+   
+}
+.post-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover; /* 'cover' para llenar, 'contain' para mostrar completa */
+    display: block;
+    border-radius: inherit; /* Hereda el radio del contenedor */
+}
+
+/* --- PIE DE PÁGINA DE LA PUBLICACIÓN (Interacciones y Guardado) --- */
+.post-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.post-interactions { /* Contenedor para "Me gusta" y "Comentar" */
+    display: flex;
+    align-items: center;
+    gap: 18px; /* Espacio entre botones de interacción */
+}
+
+.post-action-btn { /* Estilo base para todos los botones: Like, Comment, Save */
+    background: none;
+    border: none;
+    color: var(--text-secondary-color);
+    cursor: pointer;
+    padding: 6px; /* Padding más ajustado para botones de icono */
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: color 0.2s ease, background-color 0.2s ease;
+    font-size: 0.9em; /* Para el texto del contador */
+    line-height: 1; /* Para mejor alineación vertical del texto del contador */
+}
+
+.post-action-btn:hover {
+    color: var(--accent-color);
+    /* background-color: color-mix(in srgb, var(--card-bg-color) 85%, var(--border-color) 15%); */ /* Opcional: fondo en hover */
+}
+
+.post-action-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor; /* Hereda color del botón padre */
+    margin-right: 6px; /* Espacio entre icono y contador (si aplica) */
+}
+.post-action-btn.save-btn .post-action-icon { /* Si el botón de guardar no tiene contador */
+    margin-right: 0;
+}
+
+
+/* Estilos para estado activo (likeado, guardado) */
+.post-action-btn.active {
+    color: var(--accent-color); /* El contador y el icono toman el color de acento */
+    /* font-weight: bold; */ /* Opcional: para el contador */
+}
+/* No es necesario !important si la especificidad es correcta */
+.post-action-btn.active .post-action-icon {
+    fill: var(--accent-color); /* Asegura que el SVG tome el color de acento */
+}
+
+/* Contadores (si están separados del texto del botón, como en el diseño original) */
+.likes-count, .comments-count-display {
+    /* Se incluyen dentro del botón ahora */
+}
+
+
+.post-action-btn .post-action-icon { /* Estilo general para los iconos de acción */
+    width: 20px;
+    height: 20px;
+    fill: currentColor; /* Hereda el color del botón (.post-action-btn) */
+    /* margin-right ya no es necesario si el contador no está con este icono */
+}
+
+/* Cuando el botón de guardar (.save-btn) tiene la clase .active,
+   el icono .icon-saved (que es el relleno) tomará el color de acento
+   porque .post-action-btn.active ya tiene color: var(--accent-color);
+   y .icon-saved tiene fill: currentColor; */
+
+.post-action-btn.save-btn .icon-notsaved,
+.post-action-btn.save-btn .icon-saved {
+    display: inline-block; /* O block, asegúrate que se muestren */
+}
+
+/*============================================================================
+    Delete button
+    ========================================================================== */
+    .delete-post-btn { /* Hereda de .post-action-btn */
+        position: absolute;
+        top: 0px; /* Ajusta según el padding del .post-header */
+        right: 0px; /* Ajusta según el padding del .post-header */
+        padding: 6px; /* Padding más pequeño para un botón de icono solo */
+        color: var(--text-secondary-color);
+        /* background-color: transparent; */ /* ya está en .post-action-btn */
+    }
+    
+    .delete-post-btn .post-action-icon {
+        margin-right: 0; /* No necesita margen si es solo el icono */
+        width: 18px; /* Un poco más pequeño si lo prefieres */
+        height: 18px;
+    }
+    
+    .delete-post-btn:hover {
+        color: var(--error-color); /* Rojo al pasar el mouse */
+        background-color: color-mix(in srgb, var(--error-color) 15%, transparent); /* Fondo sutil rojo */
+    }
+    
+
+
+/* ==========================================================================
+   SECCIÓN DE COMENTARIOS
+   ========================================================================== */
+.comments-section {
+    margin-top: 15px;
+    /* padding-top: 15px; */ /* Quitado, el .post-footer ya tiene border-top */
+    /* border-top: 1px solid var(--border-color); */ /* Quitado */
+}
+
+.comment-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    resize: vertical;
+    min-height: 50px;
+    margin-bottom: 8px;
+}
+.comment-form button { /* Botón de enviar comentario */
+    padding: 8px 15px;
+    font-size: 0.9em;
+    display: block;
+    margin: 0 0 0 auto; /* Alinear a la derecha */
+}
+
+.comment-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin-top: 15px;
+}
+.comment-item {
+    margin-top: 15px;
+    padding-top: 10px; /* Espacio arriba */
+    padding-left: 10px; 
+    border-left: 2px solid var(--border-color); 
+}
+.comment-item:first-child {
+    margin-top: 0; /* Quitar margen superior al primer comentario */
+}
+
+.comment-header { display: flex; align-items: center; margin-bottom: 5px; }
+.comment-author-pic { width: 30px; height: 30px; border-radius: 50%; margin-right: 8px; object-fit: cover; }
+.comment-author-name { font-weight: 500; color: var(--text-color); font-size: 0.9em;}
+.comment-timestamp { font-size: 0.75em; color: var(--text-secondary-color); margin-left: 8px; }
+.comment-content { font-size: 0.95em; color: var(--text-color); margin-bottom: 5px; white-space: pre-wrap; word-wrap: break-word; }
+.comment-actions button {
+    font-size: 0.8em;
+    color: var(--text-secondary-color);
+    background: none;
+    border: none;
+    padding: 3px 6px;
+    cursor: pointer;
+    margin: 0 5px 0 0;
+}
+.comment-actions button:hover { color: var(--accent-color); }
+
+.replies-list {
+    list-style-type: none;
+    padding-left: 25px;
+    margin-top: 10px;
+}
+.reply-form { /* Formulario para responder a un comentario */
+    margin-left: 0; /* Se alinea con el comentario padre ahora */
+    margin-top: 10px;
+    padding-left: 0; /* Quitar padding extra */
+}
+
+/* ==========================================================================
+   MODAL PARA CREAR PUBLICACIÓN
+   ========================================================================== */
+.create-post-modal-content { /* Hereda de .modal-content de style.css */
+    max-width: 600px;
+}
+#createPostForm textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    resize: vertical;
+    min-height: 100px;
+    margin-bottom: 15px;
+}
+.post-image-preview-container {
+    max-height: 200px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    border: 1px dashed var(--border-color);
+    border-radius: 4px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--bg-color); /* Para que se vea el contenedor */
+}
+#postImagePreview {
+    max-width: 100%;
+    max-height: 198px;
+    object-fit: contain;
+    display: block;
+}
+.remove-image-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    line-height: 24px; /* Centra el '✖' */
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+}
+.create-post-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+.upload-image-label { /* Para el botón "Añadir Imagen" */
+    padding: 8px 15px;
+    font-size: 0.9em;
+    cursor: pointer;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+}
+.button-secondary { /* Clase para el botón de subir imagen, definida en style.css o aquí */
+    background-color: var(--card-bg-color);
+    color: var(--text-secondary-color);
+    border: 1px solid var(--border-color);
+}
+.button-secondary:hover {
+    background-color: color-mix(in srgb, var(--card-bg-color) 90%, var(--text-color) 10%);
+    color: var(--text-color);
+}
+#submitPostBtn {
+    margin: 0; /* Quitar margen automático si está en .button-primary */
+}
+
+/* ==========================================================================
+   ESTILOS PARA PESTAÑAS DE CONTENIDO EN EL PERFIL
+   ========================================================================== */
+.profile-content-tabs-container {
+    background-color: var(--card-bg-color); /* Fondo de tarjeta para el contenedor de tabs */
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out,
+                background-color var(--transition-speed-normal) ease,
+                border-color var(--transition-speed-normal) ease;
+}
+.profile-content-tabs-container.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.profile-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    /* padding: 0 10px; */ /* Quitado, el padding estará en .profile-tab-content */
+}
+
+.profile-tab-button {
+    flex-basis: 0; /* Importante para distribución equitativa */
+    flex-grow: 1;
+    padding: 14px 15px; /* Más padding vertical para mejor clic */
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-secondary-color);
+    font-size: 0.95em; /* Ligeramente más grande */
+    font-weight: 600;  /* Más bold */
+    text-align: center;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.profile-tab-button svg {
+    width: 16px; /* Iconos un poco más pequeños para pestañas */
+    height: 16px;
+    fill: currentColor;
+    opacity: 0.8; /* Un poco más sutiles */
+}
+
+.profile-tab-button:hover {
+    color: var(--text-color);
+    /* background-color: color-mix(in srgb, var(--card-bg-color) 95%, transparent); */ /* Ligero fondo en hover */
+}
+.profile-tab-button.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+}
+.profile-tab-button.active svg {
+    opacity: 1;
+}
+
+.profile-tab-content {
+    padding: 20px; /* Padding para el contenido dentro del panel de pestaña */
+}
+
+.profile-tab-pane {
+    display: none;
+}
+.profile-tab-pane.active {
+    display: block;
+    animation: fadeInTabContent 0.4s ease-out;
+}
+
+@keyframes fadeInTabContent {
+    from { opacity: 0.6; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Anular estilos de .posts-feed cuando está dentro de una pestaña del perfil */
+.profile-tab-pane .posts-feed {
+    max-width: none; /* Ocupará el ancho del panel */
+    margin: 0;
+    text-align: left;
+}
+.profile-tab-pane .posts-feed .post-card {
+    /* Si los posts dentro del perfil deben tener un padding diferente o ningún margen exterior */
+    /* padding: 10px; */
+    /* margin-bottom: 20px; */
+    /* Por defecto, heredará los estilos de .post-card */
+}
+
+.profile-tab-pane h4 { /* Título de sección como "Publicaciones Guardadas" */
+    text-align: left;
+    margin-top: 0;
+    margin-bottom: 20px; /* Más espacio debajo del título */
+    font-size: 1.1em;
+    color: var(--text-color);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color); /* Línea divisoria sutil */
+}
+
+/* Ajustes para la sección de posts del usuario DENTRO DEL PERFIL */
+/* (La que tenía el ID userProfilePostsSection) */
+#userProfilePostsSection {
+    /* Este ya es un .profile-tab-pane, así que los estilos de arriba aplican.
+       El h4 que estaba dentro se puede quitar del HTML si lo prefieres
+       y dejar que el .profile-tab-button "Publicaciones" sea el único título.
+       O mantenerlo si quieres "Publicaciones de Usuario" dentro del panel. */
+}
+#userProfilePostsSection h4 .profile-posts-username-placeholder {
+    /* Si mantienes el H4 dinámico */
+    font-weight: inherit; /* Para que no sea doble bold */
+}

@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         // Lógica específica de la página
-        if (pagePath.endsWith('/') || pagePath.endsWith('index.html')) {
+        if (pagePath.endsWith('/') || pagePath.endsWith('estadisticas.html')) {
             if (millonariosListDiv) {
                 await loadMillonarios();
             }

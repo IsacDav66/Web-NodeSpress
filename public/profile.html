@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
-
-<head>
+<head></head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Perfil</title> <!-- El título se actualizará con JS -->
+    <title>Mi Perfil</title>
     <link rel="stylesheet" href="themes.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="publicaciones.css">
     <script src="loadtheme.js"></script>
-
 </head>
-
 <body>
     <div class="page-overlay" id="pageOverlay"></div>
     <header>
@@ -18,56 +16,42 @@
         <div class="header-search-container" id="headerSearchContainer" style="display: none;">
             <input type="text" id="headerUserIdInput" placeholder="Buscar usuario...">
             <button id="headerSearchUserButton" class="search-icon-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px"
-                    height="20px">
-                    <path
-                        d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px" height="20px">
+                    <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                 </svg>
             </button>
         </div>
         <div id="userInfoArea" class="user-info-header" style="display: none;">
             <span id="loggedInUserName"></span>
-            <!-- El botón de logout está en el sidebar -->
         </div>
     </header>
-
     <div class="container">
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header-controls">
-                <button id="sidebarLogoutButton" class="sidebar-logout-btn" title="Cerrar Sesión"
-                    style="display: none;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px"
-                        height="22px">
-                        <path d="M0 0h24v24H0z" fill="none" />
-                        <path
-                            d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                <button id="sidebarLogoutButton" class="sidebar-logout-btn" title="Cerrar Sesión" style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="22px" height="22px">
+                        <path d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
                     </svg>
                 </button>
             </div>
             <div class="sidebar-profile" id="sidebarProfileInfo" style="display: none;">
-                <!-- La imagen de perfil del sidebar se actualiza por JS -->
                 <img src="placeholder-profile.jpg" alt="Foto de perfil" id="sidebarProfilePic" class="profile-pic">
                 <span id="sidebarProfileName" class="profile-name">Usuario</span>
             </div>
-            <!-- Selector de Tema en el Sidebar -->
             <div class="theme-selector-sidebar">
                 <label for="themeSelect" class="theme-select-label">Tema:</label>
-                <select id="themeSelect">
-                    <!-- Opciones se añadirán con JS -->
-                </select>
+                <select id="themeSelect"></select>
             </div>
             <ul>
-                <li><a href="index.html">📊 Estadísticas</a></li>
+                <li><a href="index.html" >📰 Publicaciones</a></li>
+                <li><a href="estadisticas.html">📊 Estadísticas</a></li>
                 <li><a href="juegos.html">🎲 Juegos</a></li>
-                <!-- El ID es para que profile.js controle su visibilidad y estado 'active' -->
                 <li id="sidebarMyProfileLinkContainer"><a href="profile.html" class="active">👤 Mi Perfil</a></li>
-                <!-- Dentro de la <ul> del sidebar -->
                 <li>
                     <a href="spotify-activity.html">
-                        <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-                            width="18px" height="18px" style="margin-right: 8px; vertical-align: middle;">
-                            <path
-                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.36 14.12c-.2.24-.58.3-.84.11-.26-.19-3.41-2.09-3.41-2.09-.27-.16-.27-.55 0-.71l3.41-2.09c.26-.19.64-.13.84.11.21.24.15.62-.11.83l-2.69 1.65 2.69 1.65c.26.21.32.59.11.83zm-1.72-3.65c-.68.41-1.37.83-2.05 1.25l-2.05 1.25c-.27.16-.6.04-.73-.24-.13-.27-.01-.6.25-.74l2.05-1.25c.68-.41 1.37-.83 2.05-1.25l2.05-1.25c.27-.16.6-.04.73.24.13.27.01.6-.25.74l-2.05 1.25zM7.76 9.6c-.2-.24-.58-.3-.84-.11-.26.19-3.41 2.09-3.41 2.09-.27.16-.27.55 0 .71l3.41 2.09c.26.19.64.13.84.11.21-.24.15.62-.11.83l-2.69-1.65L7.65 13.5c.26.21.32.59.11.83z" />
+                        <svg class="sidebar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18px" height="18px" style="margin-right: 8px; vertical-align: middle;">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.36 14.12c-.2.24-.58.3-.84.11-.26-.19-3.41-2.09-3.41-2.09-.27-.16-.27-.55 0-.71l3.41-2.09c.26-.19.64-.13.84.11.21.24.15.62-.11.83l-2.69 1.65 2.69 1.65c.26.21.32.59.11.83zm-1.72-3.65c-.68.41-1.37.83-2.05 1.25l-2.05 1.25c-.27.16-.6.04-.73-.24-.13-.27-.01-.6.25-.74l2.05-1.25c.68-.41 1.37-.83 2.05-1.25l2.05-1.25c.27-.16.6-.04.73.24.13.27.01.6-.25.74l-2.05 1.25zM7.76 9.6c-.2-.24-.58-.3-.84-.11-.26.19-3.41 2.09-3.41 2.09-.27.16-.27.55 0 .71l3.41 2.09c.26.19.64.13.84.11.21-.24.15.62-.11.83l-2.69-1.65L7.65 13.5c.26.21.32.59.11.83z"/>
                         </svg>
                         Spotify En Directo
                     </a>
@@ -77,24 +61,16 @@
         <main class="content">
             <div class="user-profile-page">
                 <div class="profile-header">
-                    <!-- La clase 'editable' se añadirá con JS si es el perfil del usuario logueado -->
                     <div class="profile-cover-photo">
                         <img src="placeholder-cover.jpg" alt="Foto de portada" id="userCoverPhoto">
-                        <div class="profile-badge" id="userProfileRankBadge" style="display:none;">
-                            <!-- El contenido del badge (medalla/número) se insertará aquí por JS -->
-                        </div>
+                        <div class="profile-badge" id="userProfileRankBadge" style="display:none;"></div>
                     </div>
-                    <!-- La clase 'editable' se añadirá con JS si es el perfil del usuario logueado -->
                     <div class="profile-picture-section">
-                        <img src="placeholder-profile.jpg" alt="Foto de perfil" id="userProfilePhoto"
-                            class="profile-main-pic">
+                        <img src="placeholder-profile.jpg" alt="Foto de perfil" id="userProfilePhoto" class="profile-main-pic">
                     </div>
                 </div>
-
                 <div class="profile-info-actions">
                     <h1 id="userProfileName" class="profile-main-name">Cargando nombre...</h1>
-                    
-                    <!-- Formulario de edición de nombre (oculto por defecto) -->
                     <div id="editNameContainer" class="edit-name-container" style="display: none;">
                         <input type="text" id="editNameInput" class="edit-name-input" placeholder="Nuevo nombre de usuario">
                         <div class="edit-name-buttons">
@@ -103,53 +79,80 @@
                         </div>
                         <p id="editNameStatus" class="message-area" style="display:none;"></p>
                     </div>
-
-                <div class="profile-stats">
-                    <div class="stat-item">
-                        <span class="stat-value" id="userFollowers">--</span>
-                        <span class="stat-label">Seguidores</span>
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="userFollowers">--</span>
+                            <span class="stat-label">Seguidores</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="userFollowing">--</span>
+                            <span class="stat-label">Siguiendo</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="userMoneyTotal">--</span>
+                            <span class="stat-label">Dinero</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="userExperience">--</span>
+                            <span class="stat-label">Experiencia</span>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="userFollowing">--</span>
-                        <span class="stat-label">Siguiendo</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="userMoneyTotal">--</span>
-                        <span class="stat-label">Dinero</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="userExperience">--</span>
-                        <span class="stat-label">Experiencia</span>
-                    </div>
-                </div>
-
-                <div id="userFullDetails" class="user-info-card" style="margin-top: 30px;">
-                    <p>Cargando detalles adicionales...</p>
+                    <!-- NUEVA SECCIÓN DE PESTAÑAS PARA PUBLICACIONES Y GUARDADOS -->
+                    <div id="profileContentTabsContainer" class="profile-content-tabs-container" style="margin-top: 25px; display: none;">
+                        <div class="profile-tabs">
+                            <button class="profile-tab-button active" data-tab-target="#userProfilePostsSection">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                    <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zm0-8h14V7H7v2z" />
+                                </svg>
+                                Publicaciones
+                            </button>
+                            <button class="profile-tab-button" data-tab-target="#userProfileSavedPostsSection"
+                                id="profileSavedPostsTabButton" style="display: none;"> <!-- Oculto por defecto -->
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                    <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
+                                </svg>
+                                Guardado
+                            </button>
+                        </div>
                     
-                </div>
-                <!-- SECCIÓN DE SPOTIFY - FUERA Y DESPUÉS DE userFullDetails -->
-                <div id="spotifyProfileSection" class="user-info-card" style="margin-top: 20px;">
-                    <!-- user-info-card para estilo similar -->
-                    <h4>Spotify</h4>
-                    <p id="spotifyStatusText">Comprobando estado de Spotify...</p>
-                    <button id="connectSpotifyButton" style="display:none; margin: 10px auto;">Conectar con Spotify</button>
-                    <!-- margin: 10px auto para centrarlo si es block -->
-                    <button id="disconnectSpotifyButton"
-                        style="display:none; margin: 10px auto; background-color: var(--error-color);">Desvincular Spotify</button>
-                    <div id="spotifyInfo" style="display:none; text-align: center;"> <!-- text-align para centrar contenido interno -->
-                        <p>Conectado como: <strong id="spotifyDisplayName"></strong></p>
-                        <img id="spotifyProfileImage" src="" alt="Perfil Spotify"
-                            style="width: 50px; height: 50px; border-radius: 50%; margin-top: 5px; display: block; margin-left: auto; margin-right: auto;">
+                        <div class="profile-tab-content">
+                            <!-- Contenedor para las Publicaciones del Usuario (el que ya tenías) -->
+                            <div id="userProfilePostsSection" class="profile-tab-pane active">
+                                <!-- El título h4 se movió a profile.js para ser dinámico o puedes dejarlo aquí si prefieres -->
+                                <!-- <h4>Publicaciones de <span class="profile-posts-username-placeholder">Usuario</span></h4> -->
+                                <div id="userProfilePostsContainer" class="posts-feed">
+                                    <p>Cargando publicaciones...</p>
+                                </div>
+                                <button id="loadMoreProfilePostsBtn" style="display:none; margin-top: 15px;">Cargar Más</button>
+                            </div>
+                    
+                            <!-- NUEVO Contenedor para las Publicaciones Guardadas -->
+                            <div id="userProfileSavedPostsSection" class="profile-tab-pane">
+                                <h4>Publicaciones Guardadas</h4>
+                                <div id="userProfileSavedPostsContainer" class="posts-feed">
+                                    <p>Cargando publicaciones guardadas...</p>
+                                </div>
+                                <button id="loadMoreProfileSavedPostsBtn" style="display:none; margin-top: 15px;">Cargar Más</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <!-- FIN DE SECCIÓN DE SPOTIFY -->
-
-
-            </div>
+                    <div id="userFullDetails" class="user-info-card" style="margin-top: 30px;">
+                        <p>Cargando detalles adicionales...</p>
+                    </div>
+                    <div id="spotifyProfileSection" class="user-info-card" style="margin-top: 20px;">
+                        <h4>Spotify</h4>
+                        <p id="spotifyStatusText">Comprobando estado de Spotify...</p>
+                        <button id="connectSpotifyButton" style="display:none; margin: 10px auto;">Conectar con Spotify</button>
+                        <button id="disconnectSpotifyButton" style="display:none; margin: 10px auto; background-color: var(--error-color);">Desvincular Spotify</button>
+                        <div id="spotifyInfo" style="display:none; text-align: center;">
+                            <p>Conectado como: <strong id="spotifyDisplayName"></strong></p>
+                            <img id="spotifyProfileImage" src="" alt="Perfil Spotify" style="width: 50px; height: 50px; border-radius: 50%; margin-top: 5px; display: block; margin-left: auto; margin-right: auto;">
+                        </div>
+                    </div>
+                    
         </main>
     </div>
-
-    <!-- ***** MODAL PARA SEGUIDORES/SIGUIENDO ***** -->
+    <!-- MODAL: Seguidores/Siguiendo -->
     <div id="followListModal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <button id="closeFollowListModal" class="modal-close-btn">×</button>
@@ -162,28 +165,24 @@
             </div>
         </div>
     </div>
-
-    <!-- ***** MODAL PARA VISUALIZAR/CAMBIAR IMAGEN ***** -->
+    <!-- MODAL: Imagen de perfil/portada -->
     <div id="imageEditModal" class="modal-overlay" style="display: none;">
         <div class="modal-content image-modal-content">
             <button id="closeImageEditModal" class="modal-close-btn">×</button>
-            <h3 id="imageEditModalTitle">Cambiar Foto</h3> <!-- El título cambiará según sea perfil o portada -->
+            <h3 id="imageEditModalTitle">Cambiar Foto</h3>
             <div class="image-preview-container">
                 <img src="" alt="Previsualización de imagen" id="imageEditPreview" class="image-preview">
             </div>
             <div class="image-upload-actions">
-                <!-- Input de archivo oculto, se activa con el botón -->
-                <input type="file" id="imageUploadInput" accept="image/png, image/jpeg, image/gif"
-                    style="display: none;">
+                <input type="file" id="imageUploadInput" accept="image/png, image/jpeg, image/gif" style="display: none;">
                 <button id="triggerImageUploadButton" class="button-change-photo">Seleccionar Archivo</button>
                 <button id="saveImageButton" style="display: none;">Guardar Cambios</button>
                 <p id="uploadStatusMessage" class="message-area" style="display:none;"></p>
             </div>
         </div>
     </div>
-
-    <script src="script.js"></script> <!-- Script general para header, sidebar, login, overlay, etc. -->
-    <script src="profile.js"></script> <!-- Script específico para la lógica de la página de perfil -->
+    <script src="script.js"></script>
+    <script src="publicaciones.js"></script>
+    <script src="profile.js"></script>
 </body>
-
 </html>

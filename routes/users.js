@@ -493,4 +493,84 @@ router.get('/:queryParam', async (req, res) => {
     }
 });
 
+
+// GET /api/user/:userId/posts - Obtener las publicaciones de un usuario específico
+router.get('/:userId/posts', async (req, res) => {
+    const profileUserId = req.params.userId; // El ID del perfil cuyas publicaciones queremos
+    const viewerId = req.query.viewerId;     // El ID del usuario que está viendo (opcional, para estado de like/save)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5; // Un límite más pequeño para perfiles
+    const offset = (page - 1) * limit;
+
+    try {
+        // Reutilizamos una consulta similar a la de /api/posts pero filtrada por user_id
+        const postsQuery = `
+            SELECT 
+                p.post_id, p.content, p.image_url, p.created_at, p.updated_at,
+                u."userId" AS author_user_id, u.pushname AS author_pushname, u."profilePhotoPath" AS author_profile_photo_path,
+                (SELECT COUNT(*) FROM post_reactions pr WHERE pr.post_id = p.post_id AND pr.reaction_type = 'like') AS like_count,
+                (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count,
+                ${viewerId ? `EXISTS(SELECT 1 FROM post_reactions pr WHERE pr.post_id = p.post_id AND pr.user_id = $4 AND pr.reaction_type = 'like') AS liked_by_viewer,` : 'FALSE AS liked_by_viewer,'}
+                ${viewerId ? `EXISTS(SELECT 1 FROM saved_posts sp WHERE sp.post_id = p.post_id AND sp.user_id = $4) AS saved_by_viewer` : 'FALSE AS saved_by_viewer'}
+            FROM posts p
+            JOIN users u ON p.user_id = u."userId"
+            WHERE p.user_id = $1 -- Filtro clave aquí
+            ORDER BY p.created_at DESC
+            LIMIT $2 OFFSET $3;
+        `;
+        const queryParams = viewerId ? [profileUserId, limit, offset, viewerId] : [profileUserId, limit, offset];
+        const result = await db.query(postsQuery, queryParams);
+        
+        res.json(result.rows);
+
+    } catch (error) {
+        console.error(`[API GET /user/${profileUserId}/posts] Error:`, error.message, error.stack);
+        res.status(500).json({ message: "Error al obtener las publicaciones del usuario." });
+    }
+});
+
+// GET /api/user/:userId/saved-posts - Obtener las publicaciones guardadas por un usuario
+router.get('/:userId/saved-posts', async (req, res) => {
+    const profileUserId = req.params.userId; // El ID del usuario cuyas publicaciones guardadas queremos
+    const viewerId = req.query.viewerId;     // El ID del usuario que está viendo (para like/save en estas guardadas)
+                                            // Importante: El viewerId aquí es crucial para saber si el viewer
+                                            // también ha likeado/guardado estos posts individualmente.
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const offset = (page - 1) * limit;
+
+    // Solo el propio usuario puede ver sus posts guardados
+    if (!viewerId || viewerId !== profileUserId) {
+        // Si no hay viewerId o no coincide con profileUserId, no permitir ver.
+        // O, si es el perfil de otro, simplemente no mostrar la pestaña de "Guardado" en el frontend.
+        // Aquí, si se intenta acceder directamente al endpoint y no es el dueño, retornar error.
+        return res.status(403).json({ message: "No tienes permiso para ver esta sección." });
+    }
+
+    try {
+        const savedPostsQuery = `
+            SELECT 
+                p.post_id, p.content, p.image_url, p.created_at AS post_created_at, p.updated_at AS post_updated_at,
+                u."userId" AS author_user_id, u.pushname AS author_pushname, u."profilePhotoPath" AS author_profile_photo_path,
+                (SELECT COUNT(*) FROM post_reactions pr WHERE pr.post_id = p.post_id AND pr.reaction_type = 'like') AS like_count,
+                (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count,
+                EXISTS(SELECT 1 FROM post_reactions pr WHERE pr.post_id = p.post_id AND pr.user_id = $1 AND pr.reaction_type = 'like') AS liked_by_viewer,
+                TRUE AS saved_by_viewer -- Si está en esta lista, es porque el viewer (que es el profileUserId) la guardó
+            FROM posts p
+            JOIN users u ON p.user_id = u."userId"
+            JOIN saved_posts sp ON p.post_id = sp.post_id
+            WHERE sp.user_id = $1 -- Publicaciones guardadas por profileUserId (que es el viewerId en este caso)
+            ORDER BY sp.created_at DESC -- Ordenar por cuándo se guardaron
+            LIMIT $2 OFFSET $3;
+        `;
+        // Pasamos profileUserId (que es igual a viewerId en este caso) dos veces
+        const result = await db.query(savedPostsQuery, [profileUserId, limit, offset]);
+        
+        res.json(result.rows);
+
+    } catch (error) {
+        console.error(`[API GET /user/${profileUserId}/saved-posts] Error:`, error.message, error.stack);
+        res.status(500).json({ message: "Error al obtener las publicaciones guardadas." });
+    }
+});
 module.exports = router;
