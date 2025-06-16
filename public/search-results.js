@@ -5,6 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const searchTermDisplay = document.getElementById('searchTermDisplay');
     const searchResultsListDiv = document.getElementById('searchResultsList');
+    
+    // Estos elementos son para mostrar un perfil detallado EN la misma página de resultados.
+    // Si siempre rediriges a profile.html al hacer clic, podrías eliminar esta lógica.
+    // Por ahora, la mantendremos como estaba en tu código original.
     const userProfileDetailDiv = document.getElementById('userProfileDetail');
     const profileSeparator = document.getElementById('profileSeparator');
 
@@ -23,12 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchAndDisplayResults(searchTerm) {
+        if (!searchResultsListDiv) return; // Salir si el div no existe
+
         searchResultsListDiv.innerHTML = '<p>Buscando usuarios...</p>';
-        userProfileDetailDiv.style.display = 'none'; // Ocultar detalles del perfil anterior
-        profileSeparator.style.display = 'none';
+        if (userProfileDetailDiv) userProfileDetailDiv.style.display = 'none';
+        if (profileSeparator) profileSeparator.style.display = 'none';
 
         try {
-            const encodedQuery = encodeURIComponent(searchTerm).replace(/%40/g, '@');
+            // Asegurarse de que el '@' no se doble codifique si ya está en el término de búsqueda
+            // La API espera el '@' como parte del ID. encodeURIComponent lo manejará bien.
+            const encodedQuery = encodeURIComponent(searchTerm); 
             const response = await fetch(`${API_BASE_URL}/user/${encodedQuery}`);
 
             if (response.status === 404) {
@@ -36,8 +44,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(`Error HTTP: ${response.status} - ${response.statusText}. Detalle: ${errorData}`);
+                let errorMsg = `Error HTTP: ${response.status} - ${response.statusText}`;
+                try {
+                    const errorData = await response.json(); // Intenta parsear como JSON
+                    errorMsg = errorData.message || errorData.error || errorMsg;
+                } catch (e) {
+                    // Si no es JSON, intenta obtener como texto (ya lo haces, pero podemos refinarlo)
+                    const textError = await response.text().catch(() => ''); // Evitar que falle si no hay texto
+                    errorMsg += `. Detalle: ${textError || '(sin detalle adicional)'}`;
+                }
+                throw new Error(errorMsg);
             }
 
             const data = await response.json();
@@ -50,8 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderResults(usersData, originalQuery) {
-        if (!Array.isArray(usersData)) { // Si la API devuelve un solo usuario (búsqueda por ID exacto)
-            usersData = [usersData];
+        if (!searchResultsListDiv) return;
+
+        if (!Array.isArray(usersData)) {
+            usersData = [usersData]; // Convertir objeto único en array si la API devuelve un solo usuario
         }
 
         if (usersData.length === 0) {
@@ -61,38 +79,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let listHTML = '<ul>';
         usersData.forEach(user => {
-            // Asumimos que el usuario tiene 'userId', 'pushname', 'money', 'bank'.
-            // Necesitaríamos una forma de obtener la URL de la foto de perfil si existiera.
             const totalMoney = (user.money || 0) + (user.bank || 0);
-            const profilePicSrc = user.profilePhotoPath ? `/${user.profilePhotoPath}` : 'placeholder-profile.jpg';
+            
+            let profilePicSrc = 'placeholder-profile.jpg'; // Imagen por defecto
+            if (user.profilePhotoPath) {
+                // Si profilePhotoPath ya es una URL completa (http o https), usarla directamente.
+                // Esto es lo esperado para las URLs de S3.
+                if (user.profilePhotoPath.startsWith('http://') || user.profilePhotoPath.startsWith('https://')) {
+                    profilePicSrc = user.profilePhotoPath;
+                } 
+                // Fallback para rutas relativas locales (si todavía usas este sistema para algunas imágenes)
+                else if (user.profilePhotoPath.startsWith('uploads/')) { 
+                    profilePicSrc = `/${user.profilePhotoPath}`; // Añadir '/' si es una ruta relativa desde la raíz
+                } 
+                // Si no es una URL completa ni una ruta 'uploads/', podría ser un error o un path inesperado.
+                // En producción, con S3, siempre debería ser una URL completa.
+                else {
+                    console.warn(`[Search Results] Formato de profilePhotoPath no reconocido para el usuario ${user.userId}: ${user.profilePhotoPath}. Usando placeholder.`);
+                    // profilePicSrc se mantiene como 'placeholder-profile.jpg'
+                }
+            }
 
-             // ¡AQUÍ ESTÁ LA CLAVE! CÓMO SE ESTABLECE data-userid
-             listHTML += `
+            listHTML += `
              <li class="search-result-item" data-userid="${escapeHtml(user.userId)}"> 
-                 <img src="${profilePicSrc}" alt="Perfil de ${escapeHtml(user.pushname) || 'Usuario'}" class="result-profile-pic">
-                 <span class="result-username">${highlightMatch(escapeHtml(user.pushname) || 'N/A', originalQuery)}</span>
-                 <span class="result-money">${FRONTEND_MONEY_SYMBOL}${totalMoney.toLocaleString()}</span>
+                 <img src="${escapeHtml(profilePicSrc)}" alt="Perfil de ${escapeHtml(user.pushname) || 'Usuario Desconocido'}" class="result-profile-pic">
+                 <div class="result-user-info">
+                    <span class="result-username">${highlightMatch(escapeHtml(user.pushname) || 'N/A', originalQuery)}</span>
+                    <span class="result-money">${FRONTEND_MONEY_SYMBOL}${totalMoney.toLocaleString()}</span>
+                 </div>
              </li>`;
         });
         listHTML += '</ul>';
         searchResultsListDiv.innerHTML = listHTML;
 
-        // Añadir event listeners a los items de la lista (sin cambios aquí)
         document.querySelectorAll('.search-result-item').forEach(item => {
             item.addEventListener('click', () => {
-                // ¡Y AQUÍ CÓMO SE LEE!
-                const userIdToView = item.dataset.userid; // o item.getAttribute('data-userid');
-                console.log("Clicked user, ID to view:", userIdToView); // <--- AÑADE ESTE LOG PARA DEPURAR
-                if (userIdToView && userIdToView !== 'undefined') { // Añadir chequeo extra
+                const userIdToView = item.dataset.userid;
+                if (userIdToView && userIdToView !== 'undefined' && userIdToView !== 'null') {
                     window.location.href = `profile.html?id=${encodeURIComponent(userIdToView)}`;
                 } else {
-                    console.error("Error: userIdToView es undefined o inválido al hacer clic.", item.dataset);
-                    alert("Error al intentar ver el perfil: ID de usuario no encontrado.");
+                    console.error("Error: userIdToView es inválido al hacer clic.", item.dataset);
+                    alert("Error al intentar ver el perfil: ID de usuario no válido.");
                 }
             });
         });
 
-        // Para la animación de aparición escalonada (si la tienes)
         const items = searchResultsListDiv.querySelectorAll('.search-result-item');
         items.forEach((item, index) => {
             setTimeout(() => {
@@ -101,37 +132,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // La función fetchAndDisplayUserProfile y displayFullUserInfo se mantienen si decides
+    // mostrar el perfil detallado en la misma página de resultados.
+    // Si siempre rediriges a profile.html, estas dos funciones podrían eliminarse de este archivo.
+    // Por ahora, las dejo como estaban en tu versión anterior.
+
     async function fetchAndDisplayUserProfile(userId) {
-        if (!userProfileDetailDiv) return;
+        if (!userProfileDetailDiv || !profileSeparator) return; // Salir si los elementos no existen
+
         userProfileDetailDiv.innerHTML = '<p>Cargando perfil...</p>';
         userProfileDetailDiv.style.display = 'block';
-        if (profileSeparator) profileSeparator.style.display = 'block';
-
+        profileSeparator.style.display = 'block';
 
         try {
-            // La API ya debería devolver todos los detalles con /api/user/:userId
             const response = await fetch(`${API_BASE_URL}/user/${encodeURIComponent(userId)}`);
             if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(`Error HTTP: ${response.status} - ${response.statusText}. Detalle: ${errorData}`);
+                 let errorMsg = `Error HTTP: ${response.status} - ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorData.error || errorMsg;
+                } catch (e) {
+                    const textError = await response.text().catch(() => '');
+                    errorMsg += `. Detalle: ${textError || '(sin detalle adicional)'}`;
+                }
+                throw new Error(errorMsg);
             }
             const user = await response.json();
-            displayFullUserInfo(user); // Usaremos una función similar a la de script.js
-            userProfileDetailDiv.classList.add('visible'); // Mostrar con animación
+            displayFullUserInfo(user);
+            userProfileDetailDiv.classList.add('visible');
         } catch (error) {
             userProfileDetailDiv.innerHTML = `<p class="error">Error al cargar el perfil: ${error.message}</p>`;
-            userProfileDetailDiv.classList.add('visible'); // Mostrar el error también
+            userProfileDetailDiv.classList.add('visible');
             console.error('Error cargando perfil de usuario:', error);
         }
     }
 
-    function displayFullUserInfo(user) { // Adaptada de script.js
+    function displayFullUserInfo(user) {
+        if (!userProfileDetailDiv) return;
         if (!user) {
             userProfileDetailDiv.innerHTML = '<p class="error">No se pudo mostrar la información del usuario.</p>';
             return;
         }
-        // Aquí podrías tener una foto de perfil más grande si la tuvieras
-        // <img src="${user.profilePicUrl || 'placeholder-profile.jpg'}" alt="Perfil" class="profile-detail-pic">
         let userDetailsHTML = `
             <h4>Detalles de ${escapeHtml(user.pushname) || 'Usuario'}:</h4>
             <p><strong>ID:</strong> ${escapeHtml(user.userId)}</p>
@@ -151,8 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userProfileDetailDiv.innerHTML = userDetailsHTML;
     }
 
-
-    // Funciones auxiliares (copiadas/adaptadas de script.js para ser autocontenido)
+    // --- Funciones Auxiliares ---
     function escapeHtml(unsafe) {
         if (unsafe === null || typeof unsafe === 'undefined') return '';
         return String(unsafe)
@@ -162,23 +202,47 @@ document.addEventListener('DOMContentLoaded', () => {
              .replace(/"/g, ".")
              .replace(/'/g, "'");
     }
+
     function escapeRegex(string) {
         if (string === null || typeof string === 'undefined') return '';
         return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     }
+
     function highlightMatch(text, query) {
         if (!text || !query) return text;
+        const safeText = String(text); // Asegurarse que text sea un string
         const safeQuery = escapeRegex(String(query));
-        const regex = new RegExp(`(${safeQuery})`, 'gi');
-        return text.replace(regex, '<span class="highlight">$1</span>');
-    }
-    function formatTimestamp(timestamp) {
-        if (!timestamp || timestamp === 0) return 'Nunca';
         try {
-            return new Date(timestamp).toLocaleString('es-ES', { 
+            const regex = new RegExp(`(${safeQuery})`, 'gi');
+            return safeText.replace(regex, '<span class="highlight">$1</span>');
+        } catch (e) {
+            console.warn("Error creando RegExp para highlight:", e);
+            return safeText; // Devolver texto original si hay error con la regex
+        }
+    }
+
+    function formatTimestamp(timestamp) {
+        if (!timestamp || timestamp === 0 || timestamp === "0") return 'Nunca'; // Manejar "0" como string también
+        let dateObj;
+        if (typeof timestamp === 'number' || (typeof timestamp === 'string' && /^\d+$/.test(timestamp))) {
+            dateObj = new Date(Number(timestamp));
+        } else if (typeof timestamp === 'string') {
+            dateObj = new Date(timestamp);
+        } else {
+            return 'Fecha no válida (tipo)';
+        }
+
+        if (!dateObj || isNaN(dateObj.getTime())) {
+            return 'Fecha inválida';
+        }
+        try {
+            return dateObj.toLocaleString('es-ES', { 
                 day: '2-digit', month: '2-digit', year: 'numeric', 
                 hour: '2-digit', minute: '2-digit' 
             });
-        } catch (e) { return 'Fecha inválida'; }
+        } catch (e) { 
+            console.error("Error formateando timestamp:", e, "Valor original:", timestamp);
+            return 'Error al formatear'; 
+        }
     }
 });

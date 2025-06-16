@@ -27,11 +27,29 @@ window.updateGlobalUserUI = function(userDataObject) {
     if (userDataObject && userDataObject.userId) {
         if (sidebarProfileInfoDiv) sidebarProfileInfoDiv.style.display = 'flex';
         if (sidebarProfilePicImg) {
-            const newSrc = userDataObject.profilePhotoPath
-                ? (userDataObject.profilePhotoPath.startsWith('/') ? userDataObject.profilePhotoPath : `/${userDataObject.profilePhotoPath}`)
-                : 'placeholder-profile.jpg';
+            let newSrc = 'placeholder-profile.jpg'; // Default
+            if (userDataObject.profilePhotoPath) {
+                // Si profilePhotoPath ya es una URL completa (https://...), usarla directamente.
+                // Si es una ruta relativa (comienza con 'uploads/'), entonces prefijar.
+                // CON S3, AHORA SIEMPRE DEBERÍA SER UNA URL COMPLETA.
+                if (userDataObject.profilePhotoPath.startsWith('https://') || userDataObject.profilePhotoPath.startsWith('http://')) {
+                    newSrc = userDataObject.profilePhotoPath;
+                } else if (userDataObject.profilePhotoPath.startsWith('uploads/')) {
+                    // Esta rama es para el sistema de archivos local, podría eliminarse si ya no se usa.
+                    newSrc = `/${userDataObject.profilePhotoPath}`; 
+                } else if (userDataObject.profilePhotoPath) {
+                     // Si no es una URL completa ni empieza con 'uploads/', podría ser un path local sin el prefijo.
+                     // Esto es menos probable con S3, pero por si acaso.
+                     // Si es S3, ya debería ser una URL completa. Si no, hay un problema en cómo se guarda/devuelve.
+                     // Por seguridad, si no es una URL http/https, asumimos placeholder o logueamos un error.
+                     console.warn("[updateGlobalUserUI] profilePhotoPath no es una URL completa HTTPS/HTTP y no empieza con 'uploads/'. Usando placeholder. Path:", userDataObject.profilePhotoPath);
+                     newSrc = 'placeholder-profile.jpg'; // O manejar el error de otra forma
+                }
+            }
+            // console.log(`[updateGlobalUserUI en ${pagePath}] Intentando establecer src de sidebarProfilePicImg a: ${newSrc}`);
             sidebarProfilePicImg.src = newSrc;
             sidebarProfilePicImg.alt = `Foto de ${escapeHtmlForGlobalUI(userDataObject.pushname) || 'Usuario'}`;
+        
         }
         if (sidebarProfileNameSpan) {
             sidebarProfileNameSpan.textContent = escapeHtmlForGlobalUI(userDataObject.pushname) || 'Usuario';

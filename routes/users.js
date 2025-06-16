@@ -1,57 +1,215 @@
 // routes/users.js
 const express = require('express');
 const path = require('path');
-const db = require('../db'); // Tu módulo de conexión a la base de datos
-const fs = require('fs');
+const db = require('../db');
+// fs ya no es necesario para guardar archivos, pero podría usarse si necesitaras
+// leer archivos locales por alguna otra razón, o para funciones de limpieza muy específicas.
+// Por ahora, lo comentaremos o eliminaremos si no se usa en otras partes de este archivo.
+// const fs = require('fs'); 
 const multer = require('multer');
+const AWS = require('aws-sdk'); // SDK de AWS para S3
 
 const router = express.Router();
 
-// --- Configuración de Multer (movida más arriba para mejor organización) ---
-const UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads');
-const PROFILE_PICS_DIR = path.join(UPLOADS_DIR, 'profile_pics');
-const COVER_PICS_DIR = path.join(UPLOADS_DIR, 'cover_pics');
+// --- Configuración de AWS S3 ---
+// El SDK tomará las credenciales y la región de las variables de entorno:
+// AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_REGION
+// Si AWS_S3_REGION no está en las variables de entorno, puedes configurarlo aquí:
+// AWS.config.update({ region: 'tu-region-s3' }); 
+const s3 = new AWS.S3(); // Crea una instancia del servicio S3
 
-// Crear directorios si no existen
-if (!fs.existsSync(UPLOADS_DIR)) { fs.mkdirSync(UPLOADS_DIR, { recursive: true }); }
-if (!fs.existsSync(PROFILE_PICS_DIR)) { fs.mkdirSync(PROFILE_PICS_DIR, { recursive: true }); }
-if (!fs.existsSync(COVER_PICS_DIR)) { fs.mkdirSync(COVER_PICS_DIR, { recursive: true }); }
-
-const storageConfig = (uploadPath) => multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadPath);
-    },
-    filename: function (req, file, cb) {
-        // En un sistema real, userId vendría de req.user.userId (autenticación)
-        const userId = req.body.userId || 'anonymous_upload';
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const extension = path.extname(file.originalname);
-        cb(null, `${userId}-${uniqueSuffix}${extension}`);
-    }
-});
+// --- Configuración de Multer para guardar en memoria ---
+const memoryStorage = multer.memoryStorage(); // Los archivos se guardan en req.file.buffer
 
 const fileFilterConfig = (req, file, cb) => {
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png' || file.mimetype === 'image/gif') {
-        cb(null, true);
+        cb(null, true); // Aceptar archivo
     } else {
-        cb(new Error('Formato de archivo no permitido. Solo se aceptan JPEG, PNG, GIF.'), false);
+        cb(new Error('Formato de archivo no permitido. Solo se aceptan JPEG, PNG, GIF.'), false); // Rechazar archivo
     }
 };
 
-const uploadProfilePic = multer({
-    storage: storageConfig(PROFILE_PICS_DIR),
+// Middleware de Multer para procesar la subida del archivo en memoria
+const uploadToMemory = multer({
+    storage: memoryStorage,
     fileFilter: fileFilterConfig,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
-});
-
-const uploadCoverPic = multer({
-    storage: storageConfig(COVER_PICS_DIR),
-    fileFilter: fileFilterConfig,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 } // Límite de 5MB
 });
 
 
-// --- ENDPOINTS DE ACCIÓN SOCIAL ---
+// --- FUNCIÓN AUXILIAR PARA ELIMINAR OBJETOS DE S3 ---
+// --- FUNCIÓN AUXILIAR PARA ELIMINAR OBJETOS DE S3 (REFINADA) ---
+async function deleteFromS3(fileUrlOrKey) {
+    if (!fileUrlOrKey || typeof fileUrlOrKey !== 'string' || !fileUrlOrKey.trim()) {
+        console.warn("[S3 Delete] Se proporcionó una URL o clave inválida/vacía para eliminar:", fileUrlOrKey);
+        return; // No intentar eliminar si no hay una URL/clave válida
+    }
+
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    if (!bucketName) {
+        console.error("[S3 Delete] Error: AWS_S3_BUCKET_NAME no está definido en las variables de entorno.");
+        return;
+    }
+
+    let keyToDelete = fileUrlOrKey;
+    let isLikelyUrl = fileUrlOrKey.startsWith('http://') || fileUrlOrKey.startsWith('https://');
+    
+    if (isLikelyUrl) {
+        try {
+            const urlObject = new URL(fileUrlOrKey);
+            let hostname = urlObject.hostname; // ej. "mi-bucket.s3.us-east-1.amazonaws.com" o "s3.us-east-1.amazonaws.com"
+            let pathname = urlObject.pathname;   // ej. "/mi-bucket/profile_pics/img.jpg" o "/profile_pics/img.jpg"
+
+            // Remover el '/' inicial del pathname si existe
+            if (pathname.startsWith('/')) {
+                pathname = pathname.substring(1);
+            }
+
+            // Comprobar si el bucket name está en el hostname (estilo virtual-hosted)
+            // o si está al inicio del pathname (estilo path-style, menos común para nuevas URLs)
+            if (hostname.startsWith(bucketName + '.')) { // Virtual-hosted style
+                keyToDelete = decodeURIComponent(pathname);
+            } else if (pathname.startsWith(bucketName + '/')) { // Path-style
+                keyToDelete = decodeURIComponent(pathname.substring(bucketName.length + 1));
+            } else {
+                // Si no coincide con los patrones comunes para ESTE bucket,
+                // podría ser una URL a otro recurso o una clave que se parece a una URL.
+                // Asumimos que si es una URL pero no de nuestro bucket, no la procesamos
+                // o si es una clave que casualmente empieza con http (muy raro).
+                // Por seguridad, si no podemos identificarla claramente como una URL de nuestro bucket,
+                // y NO es la clave literal que esperamos, no la modificamos.
+                // Si la URL no contiene el nombre de nuestro bucket en host o path, es sospechoso.
+                // En este punto, keyToDelete sigue siendo fileUrlOrKey. Si no es una URL de S3
+                // reconocida para este bucket, y tampoco es directamente una clave,
+                // la operación podría fallar o actuar sobre una clave incorrecta.
+                // Una heurística adicional: si después de quitar el protocolo, no queda un path
+                // que pueda ser una clave, o si no contiene amazonaws.com, etc.
+                // Aquí, una aproximación conservadora es no modificarla si no estamos seguros.
+                // La lógica original que tenías para extraer de patrones podría ser más específica.
+                // Por ahora, si es una URL, `new URL().pathname` decodificado es un buen punto de partida.
+                keyToDelete = decodeURIComponent(pathname); // La parte del path decodificada
+                console.log(`[S3 Delete] La URL "${fileUrlOrKey}" no coincidió con patrones de bucket específicos, usando pathname decodificado: "${keyToDelete}"`);
+            }
+        } catch (e) {
+            console.warn("[S3 Delete] No se pudo parsear como URL, se asumirá que es una clave de objeto:", fileUrlOrKey, e.message);
+            // keyToDelete ya es fileUrlOrKey, lo cual es correcto si no es una URL
+        }
+    }
+    // En este punto, keyToDelete debería ser la clave del objeto, ya sea porque se extrajo
+    // de una URL o porque fileUrlOrKey era la clave directamente.
+
+    if (!keyToDelete.trim()) {
+        console.warn("[S3 Delete] Clave vacía después del procesamiento, no se eliminará. Original:", fileUrlOrKey);
+        return;
+    }
+
+    const params = {
+        Bucket: bucketName,
+        Key: keyToDelete // Usar la clave procesada
+    };
+
+    console.log(`[S3 Delete] Intentando eliminar objeto de S3 con Key: "${params.Key}" en Bucket: "${params.Bucket}"`);
+
+    try {
+        await s3.deleteObject(params).promise();
+        console.log(`[S3 Delete] Operación de eliminación para el archivo "${keyToDelete}" enviada exitosamente a S3.`);
+        // Nota: El éxito aquí significa que la API aceptó la solicitud.
+        // S3 tiene consistencia eventual para las eliminaciones.
+    } catch (error) {
+        console.error(`[S3 Delete] Error al enviar la operación de eliminación para "${keyToDelete}" a S3:`, error.code, error.message, error.stack);
+        // Aquí podrías querer relanzar el error o manejarlo de otra forma si es crítico
+        // que la eliminación falle. Por ahora, solo lo logueamos.
+    }
+}
+
+
+// --- ENDPOINTS DE SUBIDA DE IMÁGENES (AJUSTES MENORES EN LA LLAMADA A DELETE) ---
+router.post('/upload/profile-photo', uploadToMemory.single('profileImage'), async (req, res) => {
+    // ... (código de validación y preparación de s3UploadParams como antes) ...
+    if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo o el tipo no es válido.' });
+    const userId = req.body.userId;
+    if (!userId) return res.status(400).json({ message: "Falta el ID del usuario." });
+    const fileExtension = path.extname(req.file.originalname);
+    const s3FileKey = `profile_pics/${userId}-${Date.now()}${fileExtension}`;
+    const s3UploadParams = {
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: s3FileKey, Body: req.file.buffer,
+        ContentType: req.file.mimetype, ACL: 'public-read'
+    };
+
+    try {
+        const s3UploadResult = await s3.upload(s3UploadParams).promise();
+        const imageUrl = s3UploadResult.Location; // Esta es la URL completa
+
+        const oldPicResult = await db.query('SELECT "profilePhotoPath" FROM users WHERE "userId" = $1', [userId]);
+        
+        // Lógica de eliminación de la imagen antigua
+        if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].profilePhotoPath) {
+            const oldImageUrl = oldPicResult.rows[0].profilePhotoPath;
+            // Solo eliminar si la URL antigua es diferente de la nueva y no es un placeholder
+            if (oldImageUrl && oldImageUrl !== imageUrl && !oldImageUrl.endsWith('placeholder-profile.jpg') && !oldImageUrl.endsWith('placeholder-cover.jpg')) {
+                console.log(`[UploadProfilePhoto] Se reemplazará la imagen antigua: ${oldImageUrl}`);
+                await deleteFromS3(oldImageUrl); // Pasar la URL completa o la clave
+            }
+        }
+
+        const updateDbResult = await db.query('UPDATE users SET "profilePhotoPath" = $1 WHERE "userId" = $2', [imageUrl, userId]);
+        
+        if (updateDbResult.rowCount > 0) {
+            res.json({ message: "Foto de perfil actualizada.", filePath: imageUrl });
+        } else {
+            console.warn(`[API UploadProfilePhoto S3] La BD no se actualizó para ${userId}. Archivo ${s3FileKey} subido. Intentando eliminar de S3.`);
+            await deleteFromS3(s3FileKey); // Usar s3FileKey aquí porque es la clave del objeto recién subido
+            res.status(404).json({ message: "Usuario no encontrado para actualizar foto." });
+        }
+    } catch (error) {
+        console.error("[API UploadProfilePhoto S3] Error:", error);
+        res.status(500).json({ message: "Error interno al actualizar la foto de perfil." });
+    }
+});
+
+router.post('/upload/cover-photo', uploadToMemory.single('coverImage'), async (req, res) => {
+    // ... (código de validación y preparación de s3UploadParams como antes) ...
+    if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo o el tipo no es válido.' });
+    const userId = req.body.userId;
+    if (!userId) return res.status(400).json({ message: "Falta el ID del usuario." });
+    const fileExtension = path.extname(req.file.originalname);
+    const s3FileKey = `cover_pics/${userId}-${Date.now()}${fileExtension}`;
+    const s3UploadParams = {
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: s3FileKey, Body: req.file.buffer,
+        ContentType: req.file.mimetype, ACL: 'public-read'
+    };
+
+    try {
+        const s3UploadResult = await s3.upload(s3UploadParams).promise();
+        const imageUrl = s3UploadResult.Location;
+
+        const oldPicResult = await db.query('SELECT "coverPhotoPath" FROM users WHERE "userId" = $1', [userId]);
+        if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].coverPhotoPath) {
+            const oldImageUrl = oldPicResult.rows[0].coverPhotoPath;
+            if (oldImageUrl && oldImageUrl !== imageUrl && !oldImageUrl.endsWith('placeholder-cover.jpg') && !oldImageUrl.endsWith('placeholder-profile.jpg')) {
+                console.log(`[UploadCoverPhoto] Se reemplazará la imagen antigua: ${oldImageUrl}`);
+                await deleteFromS3(oldImageUrl);
+            }
+        }
+
+        const updateDbResult = await db.query('UPDATE users SET "coverPhotoPath" = $1 WHERE "userId" = $2', [imageUrl, userId]);
+        
+        if (updateDbResult.rowCount > 0) {
+            res.json({ message: "Foto de portada actualizada.", filePath: imageUrl });
+        } else {
+            console.warn(`[API UploadCoverPhoto S3] La BD no se actualizó para ${userId}. Archivo ${s3FileKey} subido. Intentando eliminar de S3.`);
+            await deleteFromS3(s3FileKey); // Usar s3FileKey aquí
+            res.status(404).json({ message: "Usuario no encontrado para actualizar foto." });
+        }
+    } catch (error) {
+        console.error("[API UploadCoverPhoto S3] Error:", error);
+        res.status(500).json({ message: "Error interno al actualizar la foto de portada." });
+    }
+});
+
+// --- ENDPOINTS DE ACCIÓN SOCIAL --- (Sin cambios, se mantienen como estaban)
 router.post('/:userId/follow', async (req, res) => {
     const userToFollowId = req.params.userId;
     const { followerId } = req.body;
@@ -95,7 +253,6 @@ router.post('/:userId/unfollow', async (req, res) => {
 router.post('/:userId/remove-follower', async (req, res) => {
     const profileOwnerId = req.params.userId;
     const { followerToRemoveId } = req.body;
-    // Aquí iría la lógica de autenticación para asegurar que profileOwnerId es el usuario logueado
     if (!followerToRemoveId) return res.status(400).json({ message: "Falta el ID del seguidor a eliminar." });
 
     const sql = 'DELETE FROM followers WHERE "followerId" = $1 AND "followingId" = $2';
@@ -112,70 +269,8 @@ router.post('/:userId/remove-follower', async (req, res) => {
     }
 });
 
-// --- ENDPOINTS DE SUBIDA DE IMÁGENES ---
-router.post('/upload/profile-photo', uploadProfilePic.single('profileImage'), async (req, res) => {
-    if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo o el tipo no es válido.' });
-    const userId = req.body.userId; // En un sistema real, esto vendría de req.user.userId
-    if (!userId) {
-        fs.unlink(req.file.path, (err) => { if (err) console.error("Error eliminando archivo (perfil) sin userId:", err);});
-        return res.status(400).json({ message: "Falta el ID del usuario." });
-    }
-    const imagePath = `uploads/profile_pics/${req.file.filename}`;
-    try {
-        const oldPicResult = await db.query('SELECT "profilePhotoPath" FROM users WHERE "userId" = $1', [userId]);
-        if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].profilePhotoPath && oldPicResult.rows[0].profilePhotoPath !== imagePath) {
-            const oldFsPath = path.join(__dirname, '..', 'public', oldPicResult.rows[0].profilePhotoPath);
-            if (fs.existsSync(oldFsPath)) {
-                fs.unlink(oldFsPath, (unlinkErr) => { if (unlinkErr) console.error("Error eliminando foto de perfil anterior:", unlinkErr.message);});
-            }
-        }
-        const updateResult = await db.query('UPDATE users SET "profilePhotoPath" = $1 WHERE "userId" = $2', [imagePath, userId]);
-        if (updateResult.rowCount > 0) {
-            res.json({ message: "Foto de perfil actualizada.", filePath: imagePath });
-        } else {
-            fs.unlink(req.file.path, (err) => { if (err) console.error("Error eliminando archivo (perfil) tras fallo de BD:", err);});
-            res.status(404).json({ message: "Usuario no encontrado para actualizar foto." });
-        }
-    } catch (error) {
-        fs.unlink(req.file.path, (err) => { if (err) console.error("Error eliminando archivo (perfil) tras error general:", err);});
-        console.error("[API UploadProfilePhoto] Error:", error.message, error.stack);
-        res.status(500).json({ message: "Error interno al actualizar foto de perfil." });
-    }
-});
-
-router.post('/upload/cover-photo', uploadCoverPic.single('coverImage'), async (req, res) => {
-    if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo o el tipo no es válido.' });
-    const userId = req.body.userId; // En un sistema real, esto vendría de req.user.userId
-    if (!userId) {
-        fs.unlink(req.file.path, (err) => { if (err) console.error("Error eliminando archivo (portada) sin userId:", err);});
-        return res.status(400).json({ message: "Falta el ID del usuario." });
-    }
-    const imagePath = `uploads/cover_pics/${req.file.filename}`;
-    try {
-        const oldPicResult = await db.query('SELECT "coverPhotoPath" FROM users WHERE "userId" = $1', [userId]);
-        if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].coverPhotoPath && oldPicResult.rows[0].coverPhotoPath !== imagePath) {
-            const oldFsPath = path.join(__dirname, '..', 'public', oldPicResult.rows[0].coverPhotoPath);
-            if (fs.existsSync(oldFsPath)) {
-                fs.unlink(oldFsPath, (unlinkErr) => { if (unlinkErr) console.error("Error eliminando foto de portada anterior:", unlinkErr.message);});
-            }
-        }
-        const updateResult = await db.query('UPDATE users SET "coverPhotoPath" = $1 WHERE "userId" = $2', [imagePath, userId]);
-        if (updateResult.rowCount > 0) {
-            res.json({ message: "Foto de portada actualizada.", filePath: imagePath });
-        } else {
-            fs.unlink(req.file.path, (err) => { if (err) console.error("Error eliminando archivo (portada) tras fallo de BD:", err);});
-            res.status(404).json({ message: "Usuario no encontrado para actualizar foto." });
-        }
-    } catch (error) {
-        fs.unlink(req.file.path, (err) => { if (err) console.error("Error eliminando archivo (portada) tras error general:", err);});
-        console.error("[API UploadCoverPhoto] Error:", error.message, error.stack);
-        res.status(500).json({ message: "Error interno al actualizar foto de portada." });
-    }
-});
-
-// --- ENDPOINT PARA ACTUALIZAR NOMBRE ---
+// --- ENDPOINT PARA ACTUALIZAR NOMBRE --- (Sin cambios)
 router.put('/update-name', async (req, res) => {
-    // En un sistema real, userId vendría de req.user.userId (autenticación)
     const { userId, newName } = req.body;
     if (!userId || newName === undefined) {
         return res.status(400).json({ message: "Faltan el ID de usuario o el nuevo nombre." });
@@ -198,44 +293,35 @@ router.put('/update-name', async (req, res) => {
     }
 });
 
-
-// --- FUNCIÓN AUXILIAR PARA PROCESAR DATOS DEL USUARIO (SEGUIMIENTO Y RANGO) ---
-// Esta función se usa en el GET /:queryParam
+// --- FUNCIÓN AUXILIAR PARA PROCESAR DATOS DEL USUARIO (SEGUIMIENTO Y RANGO) --- (Sin cambios)
 const processUserRowWithFollowData = async (dbPool, userRow, viewerId) => {
+    // ... (código de esta función sin cambios) ...
     if (!userRow) return null;
-    const userIdFromRow = userRow.userId; // Asumiendo que "userId" ya es el nombre correcto de la columna en userRow
+    const userIdFromRow = userRow.userId; 
 
     if (!userIdFromRow) {
         console.error("processUserRowWithFollowData: userId no encontrado en userRow:", userRow);
-        // Devolver userRow tal cual pero con valores por defecto para los contadores
         return { ...userRow, followersCount: 0, followingCount: 0, isFollowing: false, rank: null };
     }
-
     let processedUser = { ...userRow, followersCount: 0, followingCount: 0, isFollowing: false, rank: null };
-
     try {
         const promises = [
             dbPool.query('SELECT COUNT(*) as count FROM followers WHERE "followingId" = $1', [userIdFromRow]),
             dbPool.query('SELECT COUNT(*) as count FROM followers WHERE "followerId" = $1', [userIdFromRow]),
             dbPool.query('SELECT COUNT(*) + 1 as rank FROM users WHERE (money + bank) > (SELECT money + bank FROM users WHERE "userId" = $1)', [userIdFromRow])
         ];
-
         if (viewerId && viewerId !== userIdFromRow) {
             promises.push(dbPool.query('SELECT COUNT(*) as count FROM followers WHERE "followerId" = $1 AND "followingId" = $2', [viewerId, userIdFromRow]));
         } else {
-            promises.push(Promise.resolve({ rows: [{ count: 0 }] })); // Placeholder para isFollowing si no hay viewerId o es el mismo usuario
+            promises.push(Promise.resolve({ rows: [{ count: 0 }] }));
         }
-
         const [followersRes, followingRes, rankRes, isFollowingResOrPlaceholder] = await Promise.all(promises);
-
         processedUser.followersCount = parseInt(followersRes.rows[0]?.count, 10) || 0;
         processedUser.followingCount = parseInt(followingRes.rows[0]?.count, 10) || 0;
         processedUser.rank = rankRes.rows[0] ? parseInt(rankRes.rows[0].rank, 10) : null;
         processedUser.isFollowing = (parseInt(isFollowingResOrPlaceholder.rows[0]?.count, 10) || 0) > 0;
-
     } catch (error) {
         console.error(`Error procesando datos adicionales para usuario ${userIdFromRow}:`, error.message);
-        // No re-lanzar el error, simplemente devolver el usuario con los datos base
     }
     return processedUser;
 };
