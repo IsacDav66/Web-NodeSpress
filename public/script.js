@@ -331,26 +331,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let loggedInUserObject = null; // Variable global en este script para el usuario actual
 
-    function showLogin() {
+    // DESPUÉS (CÓDIGO CORRECTO)
+function showLogin() {
     const pagePath = window.location.pathname;
     const queryString = window.location.search;
-    console.log(`[${pagePath}] showLogin: Usuario no autenticado. Redirigiendo a la página de login.`);
+    console.log(`[${pagePath}] showLogin: Usuario no autenticado. Redirigiendo a /socianark/login.html.`);
     
     // Limpiar cualquier dato de usuario anterior
-    loggedInUserObject = null;
     localStorage.removeItem('loggedInUser'); 
-
-    // Ocultar la UI principal inmediatamente para evitar destellos de contenido protegido
-    if (mainContentDiv) mainContentDiv.style.display = 'none';
-    if (loginSection) loginSection.style.display = 'none'; // Ocultar también la vieja sección por si acaso
     window.updateGlobalUserUI(null);
 
     // --- LÓGICA DE REDIRECCIÓN ---
     // Construye la URL a la que se debe regresar después del login.
     const redirectUrl = `${pagePath}${queryString}`;
 
-    // Redirige a la nueva página de login, pasando la URL actual como parámetro.
-    window.location.href = `/login.html?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    // Redirige a la página de login DENTRO DEL SUBDIRECTORIO
+    window.location.href = `/socianark/login.html?redirectUrl=${encodeURIComponent(redirectUrl)}`;
 }
 
 
