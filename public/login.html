@@ -1,0 +1,127 @@
+<!-- public/login.html -->
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión</title>
+    <link rel="stylesheet" href="themes.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="loadtheme.js"></script>
+    <style>
+        /* Estilos adicionales para centrar el formulario de login en la página */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding-top: 0;
+            /* Anular el padding-top del header que no existe aquí */
+        }
+
+        .container {
+            width: 100%;
+        }
+
+        /* Ajustar el contenedor del login para que no parezca fuera de lugar */
+        #login-section {
+            margin-top: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Copiamos la sección de login directamente de estadisticas.html -->
+        <section id="login-section">
+            <h2>🔑 Iniciar Sesión</h2>
+            <p style="text-align: center; color: var(--text-secondary-color); font-size: 0.9em; margin-bottom: 20px;">
+                Accede para ver las estadísticas y el resto del contenido.
+            </p>
+            <input type="text" id="loginPhoneNumber" placeholder="Tu número (+51...)" autocomplete="username">
+            <input type="password" id="loginPassword" placeholder="Tu contraseña" autocomplete="current-password">
+            <button id="loginButton">Ingresar</button>
+            <div id="loginMessage" class="message-area"></div>
+        </section>
+    </div>
+
+    <!-- Script específico para esta página -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginPhoneNumberInput = document.getElementById('loginPhoneNumber');
+            const loginPasswordInput = document.getElementById('loginPassword');
+            const loginButton = document.getElementById('loginButton');
+            const loginMessageDiv = document.getElementById('loginMessage');
+            const API_BASE_URL = '/api';
+
+            // Comprobar si ya hay un usuario logueado. Si es así, redirigir a inicio.
+            if (localStorage.getItem('loggedInUser')) {
+                window.location.href = 'index.html';
+            }
+
+            loginButton.addEventListener('click', async () => {
+                const phoneNumber = loginPhoneNumberInput.value.trim();
+                const password = loginPasswordInput.value.trim();
+
+                loginMessageDiv.className = 'message-area'; // Reset class
+                if (!phoneNumber || !password) {
+                    loginMessageDiv.textContent = 'Por favor, ingresa número y contraseña.';
+                    loginMessageDiv.classList.add('error', 'visible');
+                    return;
+                }
+                loginMessageDiv.textContent = 'Iniciando sesión...';
+                loginMessageDiv.classList.add('visible');
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phoneNumber, password }),
+                    });
+                    const data = await response.json();
+
+                    if (response.ok && data.user) {
+                        loginMessageDiv.textContent = data.message || "Inicio de sesión exitoso. Redirigiendo...";
+                        loginMessageDiv.classList.remove('error');
+                        loginMessageDiv.classList.add('success', 'visible');
+
+                        // **Punto clave:** Guardar el usuario en localStorage
+                        localStorage.setItem('loggedInUser', JSON.stringify(data.user));
+
+                        // **Lógica de redirección mejorada**
+                        const params = new URLSearchParams(window.location.search);
+                        const redirectUrl = params.get('redirectUrl');
+
+                        // Redirigir a la URL original si existe y es una ruta relativa segura, si no, a index.html
+                        setTimeout(() => {
+                            if (redirectUrl && redirectUrl.startsWith('/')) {
+                                window.location.href = redirectUrl;
+                            } else {
+                                window.location.href = 'index.html';
+                            }
+                        }, 1000); // Pequeña espera para que el usuario vea el mensaje
+
+                    } else {
+                        loginMessageDiv.textContent = data.message || 'Error al iniciar sesión.';
+                        loginMessageDiv.classList.add('error');
+                    }
+                } catch (error) {
+                    console.error('Error en fetch de login:', error);
+                    loginMessageDiv.textContent = 'Error de conexión al intentar iniciar sesión.';
+                    loginMessageDiv.classList.add('error', 'visible');
+                }
+            });
+
+            // Permitir login con la tecla Enter
+            loginPasswordInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    loginButton.click();
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

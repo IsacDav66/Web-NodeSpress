@@ -332,49 +332,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     let loggedInUserObject = null; // Variable global en este script para el usuario actual
 
     function showLogin() {
-        const pagePath = window.location.pathname;
-        console.log(`[${pagePath}] showLogin: Mostrando sección de login.`);
-        loggedInUserObject = null; // Limpiar el objeto de usuario en memoria
-        if (loginSection) loginSection.style.display = 'block';
-        if (mainContentDiv) mainContentDiv.style.display = 'none';
-        window.updateGlobalUserUI(null); // Actualiza header/sidebar a estado "no logueado"
-        localStorage.removeItem('loggedInUser'); // Asegurar que se limpie
+    const pagePath = window.location.pathname;
+    const queryString = window.location.search;
+    console.log(`[${pagePath}] showLogin: Usuario no autenticado. Redirigiendo a la página de login.`);
+    
+    // Limpiar cualquier dato de usuario anterior
+    loggedInUserObject = null;
+    localStorage.removeItem('loggedInUser'); 
+
+    // Ocultar la UI principal inmediatamente para evitar destellos de contenido protegido
+    if (mainContentDiv) mainContentDiv.style.display = 'none';
+    if (loginSection) loginSection.style.display = 'none'; // Ocultar también la vieja sección por si acaso
+    window.updateGlobalUserUI(null);
+
+    // --- LÓGICA DE REDIRECCIÓN ---
+    // Construye la URL a la que se debe regresar después del login.
+    const redirectUrl = `${pagePath}${queryString}`;
+
+    // Redirige a la nueva página de login, pasando la URL actual como parámetro.
+    window.location.href = `/login.html?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+}
+
+
+// --- Localiza la función showMainContent() y asegúrate de que el antiguo loginSection se oculte ---
+
+async function showMainContent(userObjectReceived, fromLocalStorage = false) {
+    const pagePath = window.location.pathname;
+    console.log(`[${pagePath}] showMainContent para usuario:`, userObjectReceived ? JSON.parse(JSON.stringify(userObjectReceived)) : null, `Desde localStorage: ${fromLocalStorage}`);
+    
+    if (!userObjectReceived || !userObjectReceived.userId) {
+        console.error(`[${pagePath}] showMainContent llamado sin datos de usuario válidos.`);
+        showLogin(); // Esto ahora redirigirá
+        return;
     }
 
-    async function showMainContent(userObjectReceived, fromLocalStorage = false) {
-        const pagePath = window.location.pathname;
-        console.log(`[${pagePath}] showMainContent para usuario:`, userObjectReceived ? JSON.parse(JSON.stringify(userObjectReceived)) : null, `Desde localStorage: ${fromLocalStorage}`);
-        
-        if (!userObjectReceived || !userObjectReceived.userId) {
-            console.error(`[${pagePath}] showMainContent llamado sin datos de usuario válidos.`);
-            showLogin();
-            return;
-        }
+    loggedInUserObject = userObjectReceived;
 
-        loggedInUserObject = userObjectReceived; // Actualizar la referencia en memoria
-
-        if (loginSection) loginSection.style.display = 'none';
-        if (mainContentDiv) mainContentDiv.style.display = 'block';
-        
-        window.updateGlobalUserUI(loggedInUserObject);
-        
-        // Solo actualizamos localStorage si los datos NO vienen de localStorage
-        // o si vienen del login (que son los más frescos en ese momento).
-        // Si fromLocalStorage es true, ya están en localStorage.
-        // Si es una actualización de fetchAndUpdateCurrentUser, esa función se encargará de actualizar localStorage si es necesario.
-        if (!fromLocalStorage) {
-             console.log(`[${pagePath}] Actualizando localStorage en showMainContent con:`, JSON.parse(JSON.stringify(loggedInUserObject)));
-             localStorage.setItem('loggedInUser', JSON.stringify(loggedInUserObject));
-        }
+    // AHORA: solo necesitamos ocultar la sección de login si todavía existe en alguna página (aunque la vamos a borrar).
+    // Y mostrar el contenido principal.
+    const loginSect = document.getElementById('login-section'); // Busca si existe la sección de login en la página actual
+    if (loginSect) loginSect.style.display = 'none';
+    if (mainContentDiv) mainContentDiv.style.display = 'block';
+    
+    window.updateGlobalUserUI(loggedInUserObject);
+    
+    if (!fromLocalStorage) {
+         console.log(`[${pagePath}] Actualizando localStorage en showMainContent con:`, JSON.parse(JSON.stringify(loggedInUserObject)));
+         localStorage.setItem('loggedInUser', JSON.stringify(loggedInUserObject));
+    }
 
 
-        // Lógica específica de la página
-        if (pagePath.endsWith('/') || pagePath.endsWith('estadisticas.html')) {
-            if (millonariosListDiv) {
-                await loadMillonarios();
-            }
+    // Lógica específica de la página (esta parte no cambia)
+    if (pagePath.endsWith('/') || pagePath.endsWith('estadisticas.html')) {
+        if (millonariosListDiv) {
+            await loadMillonarios();
         }
     }
+}
 
     async function fetchAndUpdateCurrentUser(userIdToFetch) {
         const pagePath = window.location.pathname;
