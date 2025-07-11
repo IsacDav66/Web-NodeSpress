@@ -1,6 +1,6 @@
 // public/profile.js
 document.addEventListener('DOMContentLoaded', () => {
-    const API_BASE_URL = '/api';
+    const API_BASE_URL = '/socianark/api';
     const FRONTEND_MONEY_SYMBOL = '💰';
 
     // --- Elementos del DOM de la Página de Perfil Principal ---

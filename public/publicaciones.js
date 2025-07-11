@@ -108,7 +108,7 @@ postEl.innerHTML = `
 };
 
 window.PostRenderer.addPostEventListeners = function(postEl, postData, loggedInUserForContext) {
-    const API_BASE_URL_LOCAL = '/api'; // Para evitar problemas de scope si se llama desde otro JS
+    const API_BASE_URL_LOCAL = '/socianark/api'; // Para evitar problemas de scope si se llama desde otro JS
     const likeBtn = postEl.querySelector('.like-btn');
     const commentBtn = postEl.querySelector('.comment-btn');
     const saveBtn = postEl.querySelector('.save-btn');
@@ -266,7 +266,7 @@ window.PostRenderer.addPostEventListeners = function(postEl, postData, loggedInU
 };
 
 window.PostRenderer.fetchCommentsForPost = async function(postId, commentListContainer, loggedInUserForContext) {
-    const API_BASE_URL_LOCAL = '/api';
+    const API_BASE_URL_LOCAL = '/socianark/api';
     commentListContainer.innerHTML = '<p>Cargando comentarios...</p>';
     commentListContainer.closest('.comments-section').dataset.commentsLoaded = "true";
     try {
@@ -314,7 +314,7 @@ window.PostRenderer.createCommentElement = function(comment, postId, loggedInUse
 };
 
 window.PostRenderer.showReplyForm = function(parentCommentEl, postId, parentCommentId, loggedInUserForContext) {
-    const API_BASE_URL_LOCAL = '/api';
+    const API_BASE_URL_LOCAL = '/socianark/api';
     parentCommentEl.querySelectorAll('.reply-form').forEach(form => form.remove());
     const replyFormEl = document.createElement('form');
     replyFormEl.className = 'comment-form reply-form';
@@ -359,7 +359,7 @@ window.PostRenderer.showReplyForm = function(parentCommentEl, postId, parentComm
 
 // Lógica específica de la página publicaciones.html (dentro de DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
-    const API_BASE_URL = '/api'; // Re-declarar para este scope si es necesario
+    const API_BASE_URL = '/socianark/api'; // Re-declarar para este scope si es necesario
     const postsContainer = document.getElementById('postsContainer');
     const openCreatePostModalBtn = document.getElementById('openCreatePostModalBtn');
     const createPostModal = document.getElementById('createPostModal');

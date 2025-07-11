@@ -287,7 +287,7 @@ function toggleTheme() {
 
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const API_BASE_URL = '/api';
+    const API_BASE_URL = '/socianark/api';
     const FRONTEND_MONEY_SYMBOL = '💰';
 
     const loginSection = document.getElementById('login-section');
