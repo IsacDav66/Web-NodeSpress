@@ -359,7 +359,7 @@ window.PostRenderer.showReplyForm = function(parentCommentEl, postId, parentComm
 
 // Lógica específica de la página publicaciones.html (dentro de DOMContentLoaded)
 document.addEventListener('DOMContentLoaded', () => {
-    const API_BASE_URL = '/socianark/api'; // Re-declarar para este scope si es necesario
+    const API_BASE_URL = '/api'; // Re-declarar para este scope si es necesario
     const postsContainer = document.getElementById('postsContainer');
     const openCreatePostModalBtn = document.getElementById('openCreatePostModalBtn');
     const createPostModal = document.getElementById('createPostModal');

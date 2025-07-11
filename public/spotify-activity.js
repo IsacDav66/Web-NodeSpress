@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // DESPUÉS (CORREGIDO Y SIMPLIFICADO)
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         // La conexión WebSocket se hace a la misma ruta base desde donde se sirve la página
-        const wsUrl = `${wsProtocol}//${window.location.host}/socianark/`;
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/`; // Apuntar a /ws/ en la raíz del dominio
         console.log(`[WebSocket] Intentando conectar a: ${wsUrl}`);
         webSocket = new WebSocket(wsUrl);
         webSocket.onopen = () => {

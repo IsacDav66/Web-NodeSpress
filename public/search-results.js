@@ -1,6 +1,6 @@
 // public/search-results.js
 document.addEventListener('DOMContentLoaded', () => {
-    const API_BASE_URL = '/socianark/api';
+    const API_BASE_URL = '/api';
     const FRONTEND_MONEY_SYMBOL = '💰';
 
     const searchTermDisplay = document.getElementById('searchTermDisplay');

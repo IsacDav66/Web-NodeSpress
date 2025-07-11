@@ -287,7 +287,7 @@ function toggleTheme() {
 
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const API_BASE_URL = '/socianark/api';
+    const API_BASE_URL = '/api';
     const FRONTEND_MONEY_SYMBOL = '💰';
 
     const loginSection = document.getElementById('login-section');
@@ -346,7 +346,7 @@ function showLogin() {
     const redirectUrl = `${pagePath}${queryString}`;
 
     // Redirige a la página de login DENTRO DEL SUBDIRECTORIO
-    window.location.href = `/socianark/login.html?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = `/login.html?redirectUrl=${encodeURIComponent(redirectUrl)}`;
 }
 
 
