@@ -29,21 +29,29 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Servir archivos estáticos
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+// Servir archivos estáticos DESDE EL SUBDIRECTORIO /socianark
+// Esto le dice a Express: "Cuando una URL pida /socianark/style.css, busca en la carpeta /public/style.css"
+// --- INICIO DE LA SOLUCIÓN UNIFICADA ---
 
-// --- Montar los Routers HTTP ---
-app.use('/api', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/games', gameRoutes);
-app.use('/api/logs', logRoutes);
-app.use('/api/spotify', spotifyRoutes); // Mantenemos el router HTTP por ahora
-app.use('/api/posts', postsRoutes); // <--- AÑADIR
+// 1. Crear un router principal para toda la aplicación en el subdirectorio
+const socianarkRouter = express.Router();
+
+// 2. Servir archivos estáticos desde el router
+// Ahora, una petición a "/socianark/style.css" será manejada por este router.
+socianarkRouter.use(express.static(path.join(__dirname, 'public')));
+socianarkRouter.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+// 3. Montar TODAS las rutas de la API DENTRO del router
+socianarkRouter.use('/api', authRoutes);
+socianarkRouter.use('/api/user', userRoutes);
+socianarkRouter.use('/api/games', gameRoutes);
+socianarkRouter.use('/api/logs', logRoutes);
+socianarkRouter.use('/api/spotify', spotifyRoutes);
+socianarkRouter.use('/api/posts', postsRoutes);
 
 
 // --- ENDPOINT DE TRADUCCIÓN (MODIFICADO CON FORZADO) ---
-app.post('/api/translate/text', async (req, res) => {
+socianarkRouter.post('/api/translate/text', async (req, res) => {
     const { text, targetLang } = req.body; // Quitamos sourceLang de la desestructuración aquí por ahora
 
     // FORZAMOS sourceLang a 'en'
@@ -153,16 +161,17 @@ setInterval(fetchSpotifyActivityAndBroadcast, SPOTIFY_POLL_INTERVAL_MS);
 // --- Rutas HTTP restantes (healthz, /, etc.) ---
 // Ruta raíz para servir el index.html (manejada por express.static)
 // Si quieres ser explícito o tener un fallback para SPA:
-app.get(['/', '/juegos.html', '/profile.html', '/search-results.html', '/registros.html'], (req, res) => {
+// --- Rutas HTTP restantes (healthz, /, etc.) ---
+// ...
+socianarkRouter.get(['/', '/juegos.html', '/profile.html', '/search-results.html', '/registros.html', '/login.html', '/estadisticas.html', '/spotify-activity.html', '/index.html'], (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html')); 
-    // Para una SPA real, todas las rutas del frontend no API deberían servir index.html
-    // y dejar que el enrutador del frontend maneje la vista.
-    // Si son páginas separadas, la configuración actual de express.static es suficiente.
-    // Este app.get('/') es un buen fallback.
-    // Para las otras páginas HTML, express.static ya las debería servir.
-    // Pero si tienes enrutamiento del lado del cliente, podrías querer que todas sirvan index.html.
-    // Por ahora, dejaremos que express.static maneje /juegos.html, etc.
 });
+
+// 6. Finalmente, montar el router principal en la app de Express
+app.use('/socianark', socianarkRouter);
+
+// --- FIN DE LA SOLUCIÓN UNIFICADA --
+
 
 // Health Check Endpoint para Render
 app.get('/healthz', (req, res) => {
@@ -176,11 +185,8 @@ app.get('/healthz', (req, res) => {
 // Ruta raíz (si no la tienes ya o si express.static no es suficiente para el health check inicial)
 // A veces Render intenta '/' para el health check si '/healthz' no está configurado explícitamente o falla.
 app.get('/', (req, res) => {
-    // Servir tu index.html o simplemente un OK para la raíz si es solo para health check.
-    // Si express.static ya sirve index.html en '/', esto podría no ser necesario,
-    // pero tener una ruta explícita para '/' que devuelva 200 no hace daño.
-    // res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    res.status(200).send('Aplicación funcionando!'); // O servir tu index.html
+    // Redirige permanentemente la raíz al subdirectorio de tu aplicación
+    res.redirect(301, '/socianark/');
 });
 
 

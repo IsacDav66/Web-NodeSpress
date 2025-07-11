@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/socianark/">
     <title>Registros del Script - Estadísticas del Bot</title>
     <link rel="stylesheet" href="themes.css">
     <link rel="stylesheet" href="style.css"> <!-- Reutilizamos el mismo estilo -->
@@ -149,7 +150,7 @@
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">Cargando registros...</td></tr>';
 
             try {
-                const response = await fetch('/api/logs/script-executions'); // Endpoint del backend
+                const response = await fetch('/socianark/api/logs/script-executions');
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: `Error HTTP ${response.status}` }));
                     throw new Error(errorData.message || `Error HTTP ${response.status}`);

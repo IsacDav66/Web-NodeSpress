@@ -4,6 +4,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <base href="/socianark/">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión</title>
     <link rel="stylesheet" href="themes.css">
@@ -53,11 +54,11 @@
             const loginPasswordInput = document.getElementById('loginPassword');
             const loginButton = document.getElementById('loginButton');
             const loginMessageDiv = document.getElementById('loginMessage');
-            const API_BASE_URL = '/api';
+            const API_BASE_URL = '/socianark/api';
 
             // Comprobar si ya hay un usuario logueado. Si es así, redirigir a inicio.
             if (localStorage.getItem('loggedInUser')) {
-                window.location.href = 'index.html';
+                window.location.href = '/socianark/index.html';
             }
 
             loginButton.addEventListener('click', async () => {

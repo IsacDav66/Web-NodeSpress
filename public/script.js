@@ -287,7 +287,7 @@ function toggleTheme() {
 
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const API_BASE_URL = '/api';
+    const API_BASE_URL = '/socianark/api';
     const FRONTEND_MONEY_SYMBOL = '💰';
 
     const loginSection = document.getElementById('login-section');
@@ -346,7 +346,7 @@ function showLogin() {
     const redirectUrl = `${pagePath}${queryString}`;
 
     // Redirige a la página de login DENTRO DEL SUBDIRECTORIO
-    window.location.href = `/login.html?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = `/socianark/login.html?redirectUrl=${encodeURIComponent(redirectUrl)}`;
 }
 
 
@@ -511,7 +511,7 @@ async function showMainContent(userObjectReceived, fromLocalStorage = false) {
         sidebarProfileInfoDiv.addEventListener('click', () => {
             console.log(`[${window.location.pathname}] Click en perfil del sidebar.`);
             if (loggedInUserObject && loggedInUserObject.userId) { // Solo redirigir si hay un usuario
-                 window.location.href = 'profile.html'; // Siempre va al perfil propio del usuario logueado
+                 window.location.href = '/socianark/profile.html'; // Siempre va al perfil propio del usuario logueado
             } else {
                 console.warn("Click en perfil del sidebar, pero no hay usuario logueado (loggedInUserObject es null).");
                 // Opcional: redirigir a login si no hay usuario logueado
@@ -564,7 +564,7 @@ async function showMainContent(userObjectReceived, fromLocalStorage = false) {
             headerUserIdInput.focus();
             return;
         }
-        window.location.href = `search-results.html?q=${encodeURIComponent(query)}`;
+        window.location.href = `/socianark/search-results.html?q=${encodeURIComponent(query)}`;
     }
     
     if (headerSearchUserButton && headerUserIdInput) {

@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // DESPUÉS (CORREGIDO Y SIMPLIFICADO)
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         // La conexión WebSocket se hace a la misma ruta base desde donde se sirve la página
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/`; // Apuntar a /ws/ en la raíz del dominio
+        const wsUrl = `${wsProtocol}//${window.location.host}/socianark/`; 
         console.log(`[WebSocket] Intentando conectar a: ${wsUrl}`);
         webSocket = new WebSocket(wsUrl);
         webSocket.onopen = () => {
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const translatedLinesPromises = tracker.originalLyricsData.map(async (line) => {
                 if (!line.text.trim()) return { time: line.time, text: '' }; 
 
-                const response = await fetch('/api/translate/text', {
+                const response = await fetch('/socianark/api/translate/text', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
