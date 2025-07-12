@@ -184,10 +184,6 @@ app.get('/healthz', (req, res) => {
 
 // Ruta raíz (si no la tienes ya o si express.static no es suficiente para el health check inicial)
 // A veces Render intenta '/' para el health check si '/healthz' no está configurado explícitamente o falla.
-app.get('/', (req, res) => {
-    // Redirige permanentemente la raíz al subdirectorio de tu aplicación
-    res.redirect(301, '/socianark/');
-});
 
 
 // --- Iniciar el Servidor HTTP (que ahora incluye el servidor WebSocket) ---
