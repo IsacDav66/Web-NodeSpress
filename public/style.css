@@ -792,3 +792,190 @@ h1#userProfileName.profile-main-name.editable-name:hover { color: var(--accent-c
 
 
 
+/* --- ESTILOS PARA EL CONTENEDOR DEL JUEGO DE GODOT --- */
+/* Este es el contenedor que mantendrá la proporción del juego */
+.godot-game-container {
+    position: relative;
+    width: 100%;
+    /* Limitamos el ancho máximo para que no se haga gigante en pantallas muy grandes */
+    max-width: 600px; 
+    margin: 0 auto; /* Centrar el contenedor */
+    overflow: hidden;
+    
+    /* --- LA MAGIA ESTÁ AQUÍ --- */
+    /* Calculamos la proporción: (alto / ancho) * 100 */
+    /* Para Pac-Man (576 / 448) * 100 = 128.57% */
+    /* Esto fuerza la altura del contenedor a ser el 128.57% de su ancho actual. */
+    padding-bottom: 128.57%; 
+    
+    /* Estilos adicionales para que se vea bien */
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: #000; /* Fondo negro por si hay bordes */
+}
+
+/* Este estilo se aplica al iframe que está DENTRO del contenedor */
+.godot-game-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none; /* Quitar cualquier borde del iframe mismo */
+}
+
+
+/* --- NUEVOS ESTILOS PARA EL CONTENEDOR HORIZONTAL DEL JUEGO --- */
+
+/* 1. El contenedor principal que define el "viewport" o área de visualización.
+      Este DIV será el rectángulo horizontal. */
+/* 1. El contenedor principal (sin cambios, ya está bien) */
+.game-viewport-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    height: 600px;
+    margin: auto;
+    background-color: #000;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+/* 2. El iframe que contiene el juego (CORREGIDO Y SIMPLIFICADO) */
+.godot-game-iframe-horizontal {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+
+/* --- ESTILOS PARA LA BARRA DE CONTROLES DEL JUEGO --- */
+.game-controls-bar {
+    text-align: center;
+    margin-top: 15px;
+}
+
+/* Un estilo secundario para botones que no son la acción principal */
+.button-secondary {
+    background-color: var(--card-bg-color);
+    color: var(--text-secondary-color);
+    border: 1px solid var(--border-color);
+    display: inline-flex; /* Para alinear el SVG y el texto */
+    align-items: center;
+    justify-content: center;
+}
+
+.button-secondary:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+    box-shadow: none;
+}
+
+/* --- ESTILOS PARA EL MODO PANTALLA COMPLETA --- */
+/* Cuando nuestro contenedor está en pantalla completa,
+   aseguramos que tenga fondo negro y siga centrando el juego. */
+#godot-game-viewport:fullscreen {
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0; /* Sin padding en pantalla completa */
+}
+
+#godot-game-viewport:fullscreen .godot-game-iframe-horizontal {
+    /* Hacemos que ocupe el 100% del contenedor sin restricciones */
+    width: 100%;
+    height: 100%;
+
+    /* Anulamos las reglas que lo limitaban en el modo normal */
+    max-width: none;
+    max-height: none;
+    aspect-ratio: auto; /* ¡Esta es la anulación más importante! */
+}
+
+
+
+/* --- ESTILOS PARA MODAL DE RECOMPENSA DE JUEGO --- */
+/* Usamos el overlay y content base, pero añadimos una clase para personalizar */
+.reward-modal-content {
+    max-width: 400px;
+    text-align: center;
+    padding: 30px 25px;
+}
+
+.reward-modal-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 15px auto;
+    display: block;
+}
+
+.reward-modal-icon .trophy-icon {
+    color: var(--accent-color);
+}
+
+.reward-modal-icon .error-icon {
+     color: var(--error-color);
+}
+
+.reward-modal-title {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0 0 10px 0;
+}
+
+.reward-modal-message {
+    font-size: 1em;
+    color: var(--text-secondary-color);
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+.reward-modal-close-btn {
+    padding: 8px 25px;
+    font-size: 1em;
+    /* Hereda el estilo del botón primario por defecto */
+}
+
+
+/* --- ESTILOS PARA LA BARRA DE CONTROLES DEL JUEGO (ACTUALIZADO) --- */
+.game-controls-bar {
+    display: flex; /* Usamos flexbox para alinear los elementos */
+    justify-content: center; /* Centramos todo en la barra */
+    align-items: center;
+    gap: 30px; /* Espacio entre el grupo de teclas y el botón de pantalla completa */
+    margin-top: 15px;
+    flex-wrap: wrap; /* Para que se vea bien en pantallas pequeñas */
+}
+
+/* Contenedor para el grupo de flechas */
+.controls-key-group {
+    display: flex;
+    gap: 5px; /* Pequeño espacio entre las teclas */
+}
+
+/* Estilo individual para cada tecla de control */
+.control-key {
+    width: 40px;
+    height: 40px;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary-color);
+    box-shadow: 0 2px 0 0 color-mix(in srgb, var(--border-color) 60%, black); /* Sombra para efecto 3D */
+    cursor: default; /* El cursor no cambia, indicando que no es clicable */
+}
+
+.control-key svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}

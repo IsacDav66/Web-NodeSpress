@@ -11,6 +11,56 @@ function escapeHtmlForGlobalUI(unsafe) {
          .replace(/'/g, "'"); // O '
 }
 
+/**
+ * Muestra un modal de notificación centrado en la pantalla.
+ * @param {string} title - El título del modal.
+ * @param {string} message - El mensaje principal a mostrar.
+ * @param {'success'|'error'} type - El tipo de modal, para cambiar el icono.
+ */
+function showRewardModal(title, message, type = 'success') {
+    // Evitar crear múltiples modales
+    if (document.getElementById('rewardModalOverlay')) return;
+
+    // Elegir el icono según el tipo
+    const successIcon = `<svg class="reward-modal-icon trophy-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.2,2H3.8C3.3,2,3,2.3,3,2.8v4.4c0,0.4,0.3,0.8,0.8,0.8h2.4c0.4,0,0.8-0.3,0.8-0.8V3h10v4.2c0,0.4,0.3,0.8,0.8,0.8h2.4 c0.4,0,0.8-0.3,0.8-0.8V2.8C21,2.3,20.7,2,20.2,2z M18,10h-2v5c0,0.6-0.4,1-1,1h-6c-0.6,0-1-0.4-1-1v-5H6c-1.1,0-2,0.9-2,2v8 c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2v-8C20,10.9,19.1,10,18,10z M12,11c-1.1,0-2,0.9-2,2s0.9,2,2,2s2-0.9,2-2S13.1,11,12,11z"/></svg>`;
+    const errorIcon = `<svg class="reward-modal-icon error-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M13,17h-2v-2h2V17z M13,13h-2V7h2V13z"/></svg>`;
+
+    // Crear el elemento del modal
+    const modalEl = document.createElement('div');
+    modalEl.id = 'rewardModalOverlay';
+    modalEl.className = 'modal-overlay';
+    modalEl.innerHTML = `
+        <div class="modal-content reward-modal-content">
+            <button class="modal-close-btn" id="rewardModalInternalClose">×</button>
+            ${type === 'success' ? successIcon : errorIcon}
+            <h3 class="reward-modal-title">${title}</h3>
+            <p class="reward-modal-message">${message}</p>
+            <button class="reward-modal-close-btn button-primary" id="rewardModalOK">Entendido</button>
+        </div>
+    `;
+
+    document.body.appendChild(modalEl);
+    document.body.classList.add('modal-open-no-scroll');
+
+    // Función para cerrar el modal
+    const closeModal = () => {
+        modalEl.classList.remove('visible');
+        document.body.classList.remove('modal-open-no-scroll');
+        modalEl.addEventListener('transitionend', () => modalEl.remove(), { once: true });
+    };
+
+    // Añadir listeners
+    modalEl.addEventListener('click', (e) => {
+        if (e.target.id === 'rewardModalOverlay') closeModal();
+    });
+    modalEl.querySelector('#rewardModalInternalClose').addEventListener('click', closeModal);
+    modalEl.querySelector('#rewardModalOK').addEventListener('click', closeModal);
+
+    // Mostrar el modal con una pequeña animación
+    setTimeout(() => modalEl.classList.add('visible'), 10);
+}
+
+
 // --- FUNCIÓN GLOBAL PARA ACTUALIZAR LA UI DEL USUARIO (SIDEBAR, HEADER) ---
 window.updateGlobalUserUI = function(userDataObject) {
     const pagePath = window.location.pathname;

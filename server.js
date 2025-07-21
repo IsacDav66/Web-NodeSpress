@@ -188,7 +188,7 @@ app.get('/healthz', (req, res) => {
 
 // --- Iniciar el Servidor HTTP (que ahora incluye el servidor WebSocket) ---
 server.listen(PORT, () => { // <--- CAMBIO: usar server.listen en lugar de app.listen
-    console.log(`Servidor HTTP y WebSocket escuchando en http://localhost:${PORT}`);
+    console.log(`Servidor HTTP y WebSocket escuchando en http://localhost:${PORT}/socianark/`);
     const db = require('./db');
     db.query('SELECT NOW()', (err, resQuery) => {
         if (err) console.error('[API Startup ERROR] No se pudo conectar a PostgreSQL:', err.message);
