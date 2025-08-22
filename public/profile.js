@@ -257,8 +257,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loggedInUserObject && user.userId === loggedInUserObject.userId) { userProfileNameH1.classList.add('editable-name'); userProfileNameH1.title = "Haz clic para cambiar tu nombre"; if(editNameContainer) editNameContainer.style.display = 'none'; } 
             else { userProfileNameH1.classList.remove('editable-name'); userProfileNameH1.title = ""; if(editNameContainer) editNameContainer.style.display = 'none';}
         }
-        if (userCoverPhotoElement) userCoverPhotoElement.src = user.coverPhotoPath || 'placeholder-cover.jpg';
-        if (userProfilePhotoElement) userProfilePhotoElement.src = user.profilePhotoPath || 'placeholder-profile.jpg';
+        if (userCoverPhotoElement) {
+            userCoverPhotoElement.src = user.coverPhotoPath || 'placeholder-cover.jpg';
+            userCoverPhotoElement.loading = 'lazy';
+        }
+        if (userProfilePhotoElement) {
+            userProfilePhotoElement.src = user.profilePhotoPath || 'placeholder-profile.jpg';
+            userProfilePhotoElement.loading = 'lazy';
+        }
         if (userFollowersSpan) userFollowersSpan.textContent = (user.followersCount === undefined ? '--' : (user.followersCount || 0).toLocaleString());
         if (userFollowingSpan) userFollowingSpan.textContent = (user.followingCount === undefined ? '--' : (user.followingCount || 0).toLocaleString());
         if (userMoneyTotalSpan) userMoneyTotalSpan.textContent = `${FRONTEND_MONEY_SYMBOL}${((user.money || 0) + (user.bank || 0)).toLocaleString()}`;

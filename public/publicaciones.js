@@ -36,7 +36,7 @@ window.PostRenderer.createPostElement = function(post, loggedInUserForContext) {
     if (post.image_url) {
         imageHTML = `
             <div class="post-image-container">
-                <img src="${window.PostRenderer.escapeHtml(post.image_url)}" alt="Imagen de la publicación">
+                <img src="${window.PostRenderer.escapeHtml(post.image_url)}" alt="Imagen de la publicación" loading="lazy">
             </div>`;
     }
 

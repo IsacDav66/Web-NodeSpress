@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             listHTML += `
              <li class="search-result-item" data-userid="${escapeHtml(user.userId)}"> 
-                 <img src="${escapeHtml(profilePicSrc)}" alt="Perfil de ${escapeHtml(user.pushname) || 'Usuario Desconocido'}" class="result-profile-pic">
+                 <img src="${escapeHtml(profilePicSrc)}" alt="Perfil de ${escapeHtml(user.pushname) || 'Usuario Desconocido'}" class="result-profile-pic" loading="lazy">
                  <div class="result-user-info">
                     <span class="result-username">${highlightMatch(escapeHtml(user.pushname) || 'N/A', originalQuery)}</span>
                     <span class="result-money">${FRONTEND_MONEY_SYMBOL}${totalMoney.toLocaleString()}</span>
