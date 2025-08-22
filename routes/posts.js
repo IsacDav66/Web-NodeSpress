@@ -21,7 +21,14 @@ const uploadToMemory = multer({
     fileFilter: fileFilterConfig,
     limits: { fileSize: 10 * 1024 * 1024 } // Límite de 10MB para imágenes de posts
 });
-const s3 = new AWS.S3();
+// --- ¡NUEVA CONFIGURACIÓN PARA CLOUDFLARE R2! ---
+const s3 = new AWS.S3({
+    endpoint: `https://6a89aca97a00cbb0cb5581f6997a05c9.r2.cloudflarestorage.com`,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    signatureVersion: 'v4',
+    region: 'auto',
+});
 
 // --- ENDPOINTS PARA PUBLICACIONES ---
 
@@ -68,13 +75,14 @@ router.post('/', uploadToMemory.single('postImage'), async (req, res) => {
         const fileExtension = path.extname(req.file.originalname);
         const s3FileKey = `post_images/${userId}-${Date.now()}${fileExtension}`;
         const s3UploadParams = {
-            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Bucket: process.env.R2_BUCKET_NAME,
             Key: s3FileKey, Body: req.file.buffer,
             ContentType: req.file.mimetype, ACL: 'public-read'
         };
         try {
-            const s3UploadResult = await s3.upload(s3UploadParams).promise();
-            imageUrl = s3UploadResult.Location;
+            //const s3UploadResult = await s3.upload(s3UploadParams).promise();
+            await s3.upload(s3UploadParams).promise();
+            imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`;
         } catch (s3Error) {
             console.error("[API POST /posts] Error subiendo imagen a S3:", s3Error);
             return res.status(500).json({ message: "Error al subir la imagen de la publicación." });
@@ -267,9 +275,9 @@ router.delete('/:postId', async (req, res) => {
                 // Necesitas una función para extraer la clave de S3 de la URL
                 const s3Key = extractS3KeyFromUrl(postData.image_url); // Implementa esta función
                 if (s3Key) {
-                    const s3 = new AWS.S3();
+                    //const s3 = new AWS.S3();
                     await s3.deleteObject({
-                        Bucket: process.env.AWS_S3_BUCKET_NAME,
+                        Bucket: process.env.R2_BUCKET_NAME,
                         Key: s3Key
                     }).promise();
                     console.log(`[API DELETE /posts/${postId}] Imagen ${s3Key} eliminada de S3.`);
@@ -302,16 +310,14 @@ function extractS3KeyFromUrl(imageUrl) {
     if (!imageUrl) return null;
     try {
         const url = new URL(imageUrl);
-        // Ejemplo: https://mi-bucket.s3.region.amazonaws.com/post_images/image.jpg -> post_images/image.jpg
-        // Esto es una simplificación, ajusta según tu estructura de bucket y path
-        if (url.hostname.includes('s3') && url.hostname.includes('amazonaws.com')) {
-            // Quita el primer '/' del pathname
-            return url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname;
-        }
+        // Para R2, la clave es simplemente el path sin la barra inicial.
+        // ej: "https://pub-....r2.dev/post_images/image.jpg" -> "post_images/image.jpg"
+        return url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname;
     } catch (e) {
-        console.warn("No se pudo parsear la URL de S3 para extraer la clave:", imageUrl, e);
+        console.warn("No se pudo parsear la URL para extraer la clave R2:", imageUrl, e);
+        // Si no es una URL, podría ser la clave directamente.
+        return imageUrl;
     }
-    return null; // O devuelve la URL original si no es un patrón S3 conocido
 }
 
 

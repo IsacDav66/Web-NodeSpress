@@ -16,7 +16,14 @@ const router = express.Router();
 // AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_REGION
 // Si AWS_S3_REGION no está en las variables de entorno, puedes configurarlo aquí:
 // AWS.config.update({ region: 'tu-region-s3' }); 
-const s3 = new AWS.S3(); // Crea una instancia del servicio S3
+// Configuración final para tu caso específico:
+const s3 = new AWS.S3({
+    endpoint: `https://6a89aca97a00cbb0cb5581f6997a05c9.r2.cloudflarestorage.com`,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    signatureVersion: 'v4',
+    region: 'auto',
+});
 
 // --- Configuración de Multer para guardar en memoria ---
 const memoryStorage = multer.memoryStorage(); // Los archivos se guardan en req.file.buffer
@@ -45,7 +52,7 @@ async function deleteFromS3(fileUrlOrKey) {
         return; // No intentar eliminar si no hay una URL/clave válida
     }
 
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    const bucketName = process.env.R2_BUCKET_NAME;
     if (!bucketName) {
         console.error("[S3 Delete] Error: AWS_S3_BUCKET_NAME no está definido en las variables de entorno.");
         return;
@@ -132,14 +139,16 @@ router.post('/upload/profile-photo', uploadToMemory.single('profileImage'), asyn
     const fileExtension = path.extname(req.file.originalname);
     const s3FileKey = `profile_pics/${userId}-${Date.now()}${fileExtension}`;
     const s3UploadParams = {
-        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Bucket: process.env.R2_BUCKET_NAME,
         Key: s3FileKey, Body: req.file.buffer,
         ContentType: req.file.mimetype, ACL: 'public-read'
     };
 
     try {
-        const s3UploadResult = await s3.upload(s3UploadParams).promise();
-        const imageUrl = s3UploadResult.Location; // Esta es la URL completa
+        await s3.upload(s3UploadParams).promise();
+    
+        // Construimos la URL pública nosotros mismos (esta es la corrección)
+        const imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`
 
         const oldPicResult = await db.query('SELECT "profilePhotoPath" FROM users WHERE "userId" = $1', [userId]);
         
@@ -176,14 +185,14 @@ router.post('/upload/cover-photo', uploadToMemory.single('coverImage'), async (r
     const fileExtension = path.extname(req.file.originalname);
     const s3FileKey = `cover_pics/${userId}-${Date.now()}${fileExtension}`;
     const s3UploadParams = {
-        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Bucket: process.env.R2_BUCKET_NAME,
         Key: s3FileKey, Body: req.file.buffer,
         ContentType: req.file.mimetype, ACL: 'public-read'
     };
 
     try {
-        const s3UploadResult = await s3.upload(s3UploadParams).promise();
-        const imageUrl = s3UploadResult.Location;
+        await s3.upload(s3UploadParams).promise();
+        const imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`; // <-- ASÍ
 
         const oldPicResult = await db.query('SELECT "coverPhotoPath" FROM users WHERE "userId" = $1', [userId]);
         if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].coverPhotoPath) {
