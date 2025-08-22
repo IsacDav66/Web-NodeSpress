@@ -1,5 +1,7 @@
 // routes/posts.js
 const express = require('express');
+const sharp = require('sharp'); // <--- AÑADE ESTA LÍNEA
+
 const db = require('../db');
 const multer = require('multer');
 const AWS = require('aws-sdk');
@@ -72,6 +74,31 @@ router.post('/', uploadToMemory.single('postImage'), async (req, res) => {
 
     let imageUrl = null;
     if (req.file) {
+            // --- INICIO DE LA MODIFICACIÓN ---
+        try {
+            const optimizedBuffer = await sharp(req.file.buffer)
+                .resize({ width: 800, withoutEnlargement: true }) // Ancho máximo de 800px para publicaciones
+                .webp({ quality: 80 })
+                .toBuffer();
+
+            const fileExtension = '.webp';
+            const s3FileKey = `post_images/${userId}-${Date.now()}${fileExtension}`;
+            const s3UploadParams = {
+                Bucket: process.env.R2_BUCKET_NAME,
+                Key: s3FileKey,
+                Body: optimizedBuffer,
+                ContentType: 'image/webp',
+                ACL: 'public-read'
+            };
+
+            await s3.upload(s3UploadParams).promise();
+            imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`;
+
+        } catch (processingError) { // Un catch específico para el error de procesamiento
+            console.error("[API POST /posts] Error procesando la imagen con Sharp:", processingError);
+            return res.status(500).json({ message: "Error al procesar la imagen de la publicación." });
+        }
+        // --- FIN DE LA MODIFICACIÓN ---
         const fileExtension = path.extname(req.file.originalname);
         const s3FileKey = `post_images/${userId}-${Date.now()}${fileExtension}`;
         const s3UploadParams = {

@@ -1,5 +1,6 @@
 // routes/users.js
 const express = require('express');
+const sharp = require('sharp'); // <--- AÑADE ESTA LÍNEA
 const path = require('path');
 const db = require('../db');
 // fs ya no es necesario para guardar archivos, pero podría usarse si necesitaras
@@ -145,6 +146,26 @@ router.post('/upload/profile-photo', uploadToMemory.single('profileImage'), asyn
     };
 
     try {
+    // --- INICIO DE LA MODIFICACIÓN ---
+
+    // 1. Procesar la imagen con Sharp
+    const optimizedBuffer = await sharp(req.file.buffer)
+        .resize({ width: 250, height: 250, fit: 'cover' }) // Redimensiona a un cuadrado de 250x250
+        .webp({ quality: 80 }) // Convierte a WebP (más ligero) con 80% de calidad
+        .toBuffer();
+
+    // 2. Cambiar la extensión del archivo y los parámetros de subida
+    const fileExtension = '.webp'; // Usaremos .webp como nueva extensión
+    const s3FileKey = `profile_pics/${userId}-${Date.now()}${fileExtension}`;
+    const s3UploadParams = {
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: s3FileKey,
+        Body: optimizedBuffer, // <--- USA EL BUFFER OPTIMIZADO
+        ContentType: 'image/webp', // <--- CAMBIA EL TIPO DE CONTENIDO
+        ACL: 'public-read'
+    };
+
+    // --- FIN DE LA MODIFICACIÓN ---
         await s3.upload(s3UploadParams).promise();
     
         // Construimos la URL pública nosotros mismos (esta es la corrección)
@@ -191,6 +212,27 @@ router.post('/upload/cover-photo', uploadToMemory.single('coverImage'), async (r
     };
 
     try {
+    // --- INICIO DE LA MODIFICACIÓN ---
+
+    // 1. Procesar la imagen con Sharp
+    const optimizedBuffer = await sharp(req.file.buffer)
+        .resize({ width: 1200, withoutEnlargement: true }) // Redimensiona a un ancho máximo de 1200px, sin agrandar si es más pequeña
+        .webp({ quality: 75 }) // Convierte a WebP con 75% de calidad
+        .toBuffer();
+
+    // 2. Cambiar la extensión del archivo y los parámetros de subida
+    const fileExtension = '.webp';
+    const s3FileKey = `cover_pics/${userId}-${Date.now()}${fileExtension}`;
+    const s3UploadParams = {
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: s3FileKey,
+        Body: optimizedBuffer, // <--- USA EL BUFFER OPTIMIZADO
+        ContentType: 'image/webp', // <--- CAMBIA EL TIPO DE CONTENIDO
+        ACL: 'public-read'
+    };
+
+    // --- FIN DE LA MODIFICACIÓN ---
+
         await s3.upload(s3UploadParams).promise();
         const imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`; // <-- ASÍ
 
