@@ -79,21 +79,20 @@ window.updateGlobalUserUI = function(userDataObject) {
         if (sidebarProfilePicImg) {
             let newSrc = 'placeholder-profile.jpg'; // Default
             if (userDataObject.profilePhotoPath) {
-                // Si profilePhotoPath ya es una URL completa (https://...), usarla directamente.
-                // Si es una ruta relativa (comienza con 'uploads/'), entonces prefijar.
-                // CON S3, AHORA SIEMPRE DEBERÍA SER UNA URL COMPLETA.
                 if (userDataObject.profilePhotoPath.startsWith('https://') || userDataObject.profilePhotoPath.startsWith('http://')) {
                     newSrc = userDataObject.profilePhotoPath;
-                } else if (userDataObject.profilePhotoPath.startsWith('uploads/')) {
-                    // Esta rama es para el sistema de archivos local, podría eliminarse si ya no se usa.
+                } 
+                // --- ¡AÑADE ESTA CONDICIÓN! ---
+                // Acepta las nuevas rutas relativas del VPS que empiezan con /socianark/
+                else if (userDataObject.profilePhotoPath.startsWith('/socianark/uploads/')) {
+                    newSrc = userDataObject.profilePhotoPath; // La ruta ya es correcta, solo úsala
+                } 
+                // --- FIN DE LA MODIFICACIÓN ---
+                else if (userDataObject.profilePhotoPath.startsWith('uploads/')) {
                     newSrc = `/${userDataObject.profilePhotoPath}`; 
                 } else if (userDataObject.profilePhotoPath) {
-                     // Si no es una URL completa ni empieza con 'uploads/', podría ser un path local sin el prefijo.
-                     // Esto es menos probable con S3, pero por si acaso.
-                     // Si es S3, ya debería ser una URL completa. Si no, hay un problema en cómo se guarda/devuelve.
-                     // Por seguridad, si no es una URL http/https, asumimos placeholder o logueamos un error.
-                     console.warn("[updateGlobalUserUI] profilePhotoPath no es una URL completa HTTPS/HTTP y no empieza con 'uploads/'. Usando placeholder. Path:", userDataObject.profilePhotoPath);
-                     newSrc = 'placeholder-profile.jpg'; // O manejar el error de otra forma
+                    console.warn("[updateGlobalUserUI] profilePhotoPath no es una URL completa HTTPS/HTTP y no empieza con 'uploads/'. Usando placeholder. Path:", userDataObject.profilePhotoPath);
+                    newSrc = 'placeholder-profile.jpg';
                 }
             }
             // console.log(`[updateGlobalUserUI en ${pagePath}] Intentando establecer src de sidebarProfilePicImg a: ${newSrc}`);
