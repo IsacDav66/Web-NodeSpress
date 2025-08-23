@@ -4,7 +4,8 @@ const sharp = require('sharp'); // <--- AÑADE ESTA LÍNEA
 
 const db = require('../db');
 const multer = require('multer');
-const AWS = require('aws-sdk');
+//const AWS = require('aws-sdk')
+const fs = require('fs');
 const path = require('path');
 
 const router = express.Router();
@@ -23,14 +24,7 @@ const uploadToMemory = multer({
     fileFilter: fileFilterConfig,
     limits: { fileSize: 10 * 1024 * 1024 } // Límite de 10MB para imágenes de posts
 });
-// --- ¡NUEVA CONFIGURACIÓN PARA CLOUDFLARE R2! ---
-const s3 = new AWS.S3({
-    endpoint: `https://6a89aca97a00cbb0cb5581f6997a05c9.r2.cloudflarestorage.com`,
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-    signatureVersion: 'v4',
-    region: 'auto',
-});
+
 
 // --- ENDPOINTS PARA PUBLICACIONES ---
 
@@ -74,34 +68,29 @@ router.post('/', uploadToMemory.single('postImage'), async (req, res) => {
 
     let imageUrl = null;
     if (req.file) {
-        // 1. Crear el nombre del archivo final
-        const s3FileKey = `post_images/${userId}-${Date.now()}.webp`;
+    // 1. Crear el nombre del archivo final
+    const fileName = `post_images/${userId}-${Date.now()}.webp`;
+    // 2. Definir la ruta completa donde se guardará en el VPS
+    const filePath = path.join('/var/www/socianark/uploads', fileName);
 
-        try {
-            // 2. Procesar la imagen con Sharp
-            const processedImageBuffer = await sharp(req.file.buffer)
-                .resize({ width: 1200, withoutEnlargement: true }) // Un buen ancho para imágenes de posts
-                .webp({ quality: 80 })
-                .toBuffer();
+    try {
+        // 3. Procesar la imagen con Sharp
+        const processedImageBuffer = await sharp(req.file.buffer)
+            .resize({ width: 1200, withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer();
+        
+        // 4. Guardar el archivo procesado en el disco
+        await fs.promises.writeFile(filePath, processedImageBuffer);
 
-            // 3. Definir parámetros de subida
-            const s3UploadParams = {
-                Bucket: process.env.R2_BUCKET_NAME,
-                Key: s3FileKey,
-                Body: processedImageBuffer,
-                ContentType: 'image/webp',
-                ACL: 'public-read'
-            };
-            
-            // 4. Subir y construir la URL
-            await s3.upload(s3UploadParams).promise();
-            imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`;
+        // 5. Crear la URL pública que se guardará en la base de datos
+        imageUrl = `/socianark/uploads/${fileName}`;
 
-        } catch (error) { // Un solo catch para el procesamiento y la subida
-            console.error("[API POST /posts] Error procesando o subiendo imagen:", error);
-            return res.status(500).json({ message: "Error al procesar la imagen de la publicación." });
-        }
+    } catch (error) {
+        console.error("[API POST /posts] Error procesando o guardando imagen local:", error);
+        return res.status(500).json({ message: "Error al procesar la imagen de la publicación." });
     }
+}
 
     try {
         const sql = 'INSERT INTO posts (user_id, content, image_url) VALUES ($1, $2, $3) RETURNING *';
@@ -281,27 +270,8 @@ router.delete('/:postId', async (req, res) => {
 
         // (Opcional pero recomendado) Si la publicación tiene una imagen en S3, eliminarla
         if (postData.image_url) {
-            // Asumiendo que tienes una función deleteFromS3 similar a la de users.js
-            // Si no, necesitarías importarla o recrearla aquí.
-            // Por simplicidad, la lógica de extracción de clave de S3 se omite aquí,
-            // asumiendo que deleteFromS3 puede manejar la URL completa.
-            try {
-                // Necesitas una función para extraer la clave de S3 de la URL
-                const s3Key = extractS3KeyFromUrl(postData.image_url); // Implementa esta función
-                if (s3Key) {
-                    //const s3 = new AWS.S3();
-                    await s3.deleteObject({
-                        Bucket: process.env.R2_BUCKET_NAME,
-                        Key: s3Key
-                    }).promise();
-                    console.log(`[API DELETE /posts/${postId}] Imagen ${s3Key} eliminada de S3.`);
-                }
-            } catch (s3Error) {
-                console.error(`[API DELETE /posts/${postId}] Error eliminando imagen de S3 ${postData.image_url}:`, s3Error);
-                // Continuar con la eliminación del post de la BD incluso si falla la de S3,
-                // pero loguear el error es importante.
-            }
-        }
+        await deleteLocalFile(postData.image_url);
+    }
 
         // 2. Eliminar el post de la base de datos
         // La eliminación en cascada configurada en la BD debería encargarse de
@@ -320,19 +290,23 @@ router.delete('/:postId', async (req, res) => {
 
 // Función auxiliar para extraer la clave S3 de una URL (simplificada)
 // Necesitarás adaptarla a la estructura de tus URLs de S3
-function extractS3KeyFromUrl(imageUrl) {
-    if (!imageUrl) return null;
+
+
+async function deleteLocalFile(imageUrl) {
+    if (!imageUrl || !imageUrl.startsWith('/socianark/uploads/')) {
+        return;
+    }
+    const relativePath = imageUrl.replace('/socianark', '');
+    const filePath = path.join('/var/www/socianark', relativePath);
+
     try {
-        const url = new URL(imageUrl);
-        // Para R2, la clave es simplemente el path sin la barra inicial.
-        // ej: "https://pub-....r2.dev/post_images/image.jpg" -> "post_images/image.jpg"
-        return url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname;
-    } catch (e) {
-        console.warn("No se pudo parsear la URL para extraer la clave R2:", imageUrl, e);
-        // Si no es una URL, podría ser la clave directamente.
-        return imageUrl;
+        await fs.promises.unlink(filePath);
+        console.log(`[File Delete] Archivo local eliminado: ${filePath}`);
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            console.error(`[File Delete] Error al eliminar archivo local ${filePath}:`, error);
+        }
     }
 }
-
 
 module.exports = router;

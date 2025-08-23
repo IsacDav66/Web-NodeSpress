@@ -39,7 +39,10 @@ const socianarkRouter = express.Router();
 // 2. Servir archivos estáticos desde el router
 // Ahora, una petición a "/socianark/style.css" será manejada por este router.
 socianarkRouter.use(express.static(path.join(__dirname, 'public')));
-socianarkRouter.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+socianarkRouter.use('/uploads', express.static('/var/www/socianark/uploads'));
+
+socianarkRouter.use('/uploads', express.static(path.join(__dirname, 'public/uploads'))); // <-- ¡AÑADE ESTA LÍNEA!
 
 // 3. Montar TODAS las rutas de la API DENTRO del router
 socianarkRouter.use('/api', authRoutes);

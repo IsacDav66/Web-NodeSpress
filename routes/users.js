@@ -6,9 +6,8 @@ const db = require('../db');
 // fs ya no es necesario para guardar archivos, pero podría usarse si necesitaras
 // leer archivos locales por alguna otra razón, o para funciones de limpieza muy específicas.
 // Por ahora, lo comentaremos o eliminaremos si no se usa en otras partes de este archivo.
-// const fs = require('fs'); 
+const fs = require('fs'); 
 const multer = require('multer');
-const AWS = require('aws-sdk'); // SDK de AWS para S3
 
 const router = express.Router();
 
@@ -18,13 +17,7 @@ const router = express.Router();
 // Si AWS_S3_REGION no está en las variables de entorno, puedes configurarlo aquí:
 // AWS.config.update({ region: 'tu-region-s3' }); 
 // Configuración final para tu caso específico:
-const s3 = new AWS.S3({
-    endpoint: `https://6a89aca97a00cbb0cb5581f6997a05c9.r2.cloudflarestorage.com`,
-    accessKeyId: process.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-    signatureVersion: 'v4',
-    region: 'auto',
-});
+
 
 // --- Configuración de Multer para guardar en memoria ---
 const memoryStorage = multer.memoryStorage(); // Los archivos se guardan en req.file.buffer
@@ -47,86 +40,24 @@ const uploadToMemory = multer({
 
 // --- FUNCIÓN AUXILIAR PARA ELIMINAR OBJETOS DE S3 ---
 // --- FUNCIÓN AUXILIAR PARA ELIMINAR OBJETOS DE S3 (REFINADA) ---
-async function deleteFromS3(fileUrlOrKey) {
-    if (!fileUrlOrKey || typeof fileUrlOrKey !== 'string' || !fileUrlOrKey.trim()) {
-        console.warn("[S3 Delete] Se proporcionó una URL o clave inválida/vacía para eliminar:", fileUrlOrKey);
-        return; // No intentar eliminar si no hay una URL/clave válida
-    }
-
-    const bucketName = process.env.R2_BUCKET_NAME;
-    if (!bucketName) {
-        console.error("[S3 Delete] Error: AWS_S3_BUCKET_NAME no está definido en las variables de entorno.");
+async function deleteLocalFile(imageUrl) {
+    // imageUrl será algo como '/socianark/uploads/profile_pics/...'
+    if (!imageUrl || !imageUrl.startsWith('/socianark/uploads/')) {
         return;
     }
-
-    let keyToDelete = fileUrlOrKey;
-    let isLikelyUrl = fileUrlOrKey.startsWith('http://') || fileUrlOrKey.startsWith('https://');
     
-    if (isLikelyUrl) {
-        try {
-            const urlObject = new URL(fileUrlOrKey);
-            let hostname = urlObject.hostname; // ej. "mi-bucket.s3.us-east-1.amazonaws.com" o "s3.us-east-1.amazonaws.com"
-            let pathname = urlObject.pathname;   // ej. "/mi-bucket/profile_pics/img.jpg" o "/profile_pics/img.jpg"
-
-            // Remover el '/' inicial del pathname si existe
-            if (pathname.startsWith('/')) {
-                pathname = pathname.substring(1);
-            }
-
-            // Comprobar si el bucket name está en el hostname (estilo virtual-hosted)
-            // o si está al inicio del pathname (estilo path-style, menos común para nuevas URLs)
-            if (hostname.startsWith(bucketName + '.')) { // Virtual-hosted style
-                keyToDelete = decodeURIComponent(pathname);
-            } else if (pathname.startsWith(bucketName + '/')) { // Path-style
-                keyToDelete = decodeURIComponent(pathname.substring(bucketName.length + 1));
-            } else {
-                // Si no coincide con los patrones comunes para ESTE bucket,
-                // podría ser una URL a otro recurso o una clave que se parece a una URL.
-                // Asumimos que si es una URL pero no de nuestro bucket, no la procesamos
-                // o si es una clave que casualmente empieza con http (muy raro).
-                // Por seguridad, si no podemos identificarla claramente como una URL de nuestro bucket,
-                // y NO es la clave literal que esperamos, no la modificamos.
-                // Si la URL no contiene el nombre de nuestro bucket en host o path, es sospechoso.
-                // En este punto, keyToDelete sigue siendo fileUrlOrKey. Si no es una URL de S3
-                // reconocida para este bucket, y tampoco es directamente una clave,
-                // la operación podría fallar o actuar sobre una clave incorrecta.
-                // Una heurística adicional: si después de quitar el protocolo, no queda un path
-                // que pueda ser una clave, o si no contiene amazonaws.com, etc.
-                // Aquí, una aproximación conservadora es no modificarla si no estamos seguros.
-                // La lógica original que tenías para extraer de patrones podría ser más específica.
-                // Por ahora, si es una URL, `new URL().pathname` decodificado es un buen punto de partida.
-                keyToDelete = decodeURIComponent(pathname); // La parte del path decodificada
-                console.log(`[S3 Delete] La URL "${fileUrlOrKey}" no coincidió con patrones de bucket específicos, usando pathname decodificado: "${keyToDelete}"`);
-            }
-        } catch (e) {
-            console.warn("[S3 Delete] No se pudo parsear como URL, se asumirá que es una clave de objeto:", fileUrlOrKey, e.message);
-            // keyToDelete ya es fileUrlOrKey, lo cual es correcto si no es una URL
-        }
-    }
-    // En este punto, keyToDelete debería ser la clave del objeto, ya sea porque se extrajo
-    // de una URL o porque fileUrlOrKey era la clave directamente.
-
-    if (!keyToDelete.trim()) {
-        console.warn("[S3 Delete] Clave vacía después del procesamiento, no se eliminará. Original:", fileUrlOrKey);
-        return;
-    }
-
-    const params = {
-        Bucket: bucketName,
-        Key: keyToDelete // Usar la clave procesada
-    };
-
-    console.log(`[S3 Delete] Intentando eliminar objeto de S3 con Key: "${params.Key}" en Bucket: "${params.Bucket}"`);
+    // Construye la ruta absoluta en el sistema de archivos del VPS
+    const relativePath = imageUrl.replace('/socianark', ''); // -> '/uploads/profile_pics/...'
+    const filePath = path.join('/var/www/socianark', relativePath);
 
     try {
-        await s3.deleteObject(params).promise();
-        console.log(`[S3 Delete] Operación de eliminación para el archivo "${keyToDelete}" enviada exitosamente a S3.`);
-        // Nota: El éxito aquí significa que la API aceptó la solicitud.
-        // S3 tiene consistencia eventual para las eliminaciones.
+        await fs.promises.unlink(filePath);
+        console.log(`[File Delete] Archivo local eliminado: ${filePath}`);
     } catch (error) {
-        console.error(`[S3 Delete] Error al enviar la operación de eliminación para "${keyToDelete}" a S3:`, error.code, error.message, error.stack);
-        // Aquí podrías querer relanzar el error o manejarlo de otra forma si es crítico
-        // que la eliminación falle. Por ahora, solo lo logueamos.
+        // Si el archivo no existe (error ENOENT), no es un problema grave.
+        if (error.code !== 'ENOENT') {
+            console.error(`[File Delete] Error al eliminar archivo local ${filePath}:`, error);
+        }
     }
 }
 
@@ -138,54 +69,36 @@ router.post('/upload/profile-photo', uploadToMemory.single('profileImage'), asyn
     const userId = req.body.userId;
     if (!userId) return res.status(400).json({ message: "Falta el ID del usuario." });
 
-    // 1. Crear el nombre del archivo final con extensión .webp
-    const s3FileKey = `profile_pics/${userId}-${Date.now()}.webp`;
-
-    try { // <-- El try/catch debe empezar aquí
-        // 2. Procesar la imagen con Sharp
-        const processedImageBuffer = await sharp(req.file.buffer)
-            .resize({ width: 250, height: 250, fit: 'cover' }) // Un buen tamaño para fotos de perfil
-            .webp({ quality: 80 })
-            .toBuffer();
-
-        // 3. Definir los parámetros de subida con la imagen procesada
-        const s3UploadParams = {
-            Bucket: process.env.R2_BUCKET_NAME,
-            Key: s3FileKey,
-            Body: processedImageBuffer,
-            ContentType: 'image/webp',
-            ACL: 'public-read'
-        };
-        
-        // 4. Subir el archivo y continuar con la lógica...
-        await s3.upload(s3UploadParams).promise();
     
-        // Construimos la URL pública nosotros mismos (esta es la corrección)
-        const imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`
 
-        const oldPicResult = await db.query('SELECT "profilePhotoPath" FROM users WHERE "userId" = $1', [userId]);
-        
-        // Lógica de eliminación de la imagen antigua
-        if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].profilePhotoPath) {
-            const oldImageUrl = oldPicResult.rows[0].profilePhotoPath;
-            // Solo eliminar si la URL antigua es diferente de la nueva y no es un placeholder
-            if (oldImageUrl && oldImageUrl !== imageUrl && !oldImageUrl.endsWith('placeholder-profile.jpg') && !oldImageUrl.endsWith('placeholder-cover.jpg')) {
-                console.log(`[UploadProfilePhoto] Se reemplazará la imagen antigua: ${oldImageUrl}`);
-                await deleteFromS3(oldImageUrl); // Pasar la URL completa o la clave
-            }
-        }
+    try {
+    // 1. Procesar la imagen con Sharp
+    const processedImageBuffer = await sharp(req.file.buffer)
+        .resize({ width: 250, height: 250, fit: 'cover' })
+        .webp({ quality: 80 })
+        .toBuffer();
 
-        const updateDbResult = await db.query('UPDATE users SET "profilePhotoPath" = $1 WHERE "userId" = $2', [imageUrl, userId]);
-        
-        if (updateDbResult.rowCount > 0) {
-            res.json({ message: "Foto de perfil actualizada.", filePath: imageUrl });
-        } else {
-            console.warn(`[API UploadProfilePhoto S3] La BD no se actualizó para ${userId}. Archivo ${s3FileKey} subido. Intentando eliminar de S3.`);
-            await deleteFromS3(s3FileKey); // Usar s3FileKey aquí porque es la clave del objeto recién subido
-            res.status(404).json({ message: "Usuario no encontrado para actualizar foto." });
-        }
+    // 2. Preparar la ruta y el nombre del archivo para guardarlo localmente
+    const fileName = `profile_pics/${userId}-${Date.now()}.webp`;
+    const filePath = path.join('/var/www/socianark/uploads', fileName);
+    
+    // 3. Guardar el archivo en el disco del VPS
+    await fs.promises.writeFile(filePath, processedImageBuffer);
+
+    // 4. Crear la URL pública relativa que se guardará en la BD
+    const imageUrl = `/socianark/uploads/${fileName}`;
+
+    // (El resto de la lógica para borrar el archivo antiguo y actualizar la BD sigue igual)
+    const oldPicResult = await db.query('SELECT "profilePhotoPath" FROM users WHERE "userId" = $1', [userId]);
+    if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].profilePhotoPath) {
+        await deleteLocalFile(oldPicResult.rows[0].profilePhotoPath); // <--- Usa la nueva función de borrado
+    }
+    
+    await db.query('UPDATE users SET "profilePhotoPath" = $1 WHERE "userId" = $2', [imageUrl, userId]);
+    res.json({ message: "Foto de perfil actualizada.", filePath: imageUrl });
+
     } catch (error) {
-        console.error("[API UploadProfilePhoto S3] Error:", error);
+        console.error("[API UploadProfilePhoto Local] Error:", error);
         res.status(500).json({ message: "Error interno al actualizar la foto de perfil." });
     }
 });
@@ -196,51 +109,32 @@ router.post('/upload/cover-photo', uploadToMemory.single('coverImage'), async (r
     const userId = req.body.userId;
     if (!userId) return res.status(400).json({ message: "Falta el ID del usuario." });
 
-    // 1. Crear el nombre del archivo final con extensión .webp
-    const s3FileKey = `cover_pics/${userId}-${Date.now()}.webp`;
 
-    try { // <-- El try/catch debe empezar aquí
-        // 2. Procesar la imagen con Sharp
-        const processedImageBuffer = await sharp(req.file.buffer)
-            .resize({ width: 1200, withoutEnlargement: true }) // Ancho máximo de 1200px para portadas
-            .webp({ quality: 75 })
-            .toBuffer();
+    try {
+    const processedImageBuffer = await sharp(req.file.buffer)
+        .resize({ width: 1200, withoutEnlargement: true })
+        .webp({ quality: 75 })
+        .toBuffer();
 
-        // 3. Definir los parámetros de subida con la imagen procesada
-        const s3UploadParams = {
-            Bucket: process.env.R2_BUCKET_NAME,
-            Key: s3FileKey,
-            Body: processedImageBuffer,
-            ContentType: 'image/webp',
-            ACL: 'public-read'
-        };
-        
-        // 4. Subir el archivo y continuar...
-        await s3.upload(s3UploadParams).promise();
-        const imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`;
+    const fileName = `cover_pics/${userId}-${Date.now()}.webp`;
+    const filePath = path.join('/var/www/socianark/uploads', fileName);
+    
+    await fs.promises.writeFile(filePath, processedImageBuffer);
 
-        const oldPicResult = await db.query('SELECT "coverPhotoPath" FROM users WHERE "userId" = $1', [userId]);
-        if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].coverPhotoPath) {
-            const oldImageUrl = oldPicResult.rows[0].coverPhotoPath;
-            if (oldImageUrl && oldImageUrl !== imageUrl && !oldImageUrl.endsWith('placeholder-cover.jpg') && !oldImageUrl.endsWith('placeholder-profile.jpg')) {
-                console.log(`[UploadCoverPhoto] Se reemplazará la imagen antigua: ${oldImageUrl}`);
-                await deleteFromS3(oldImageUrl);
-            }
-        }
+    const imageUrl = `/socianark/uploads/${fileName}`;
 
-        const updateDbResult = await db.query('UPDATE users SET "coverPhotoPath" = $1 WHERE "userId" = $2', [imageUrl, userId]);
-        
-        if (updateDbResult.rowCount > 0) {
-            res.json({ message: "Foto de portada actualizada.", filePath: imageUrl });
-        } else {
-            console.warn(`[API UploadCoverPhoto S3] La BD no se actualizó para ${userId}. Archivo ${s3FileKey} subido. Intentando eliminar de S3.`);
-            await deleteFromS3(s3FileKey); // Usar s3FileKey aquí
-            res.status(404).json({ message: "Usuario no encontrado para actualizar foto." });
-        }
-    } catch (error) {
-        console.error("[API UploadCoverPhoto S3] Error:", error);
-        res.status(500).json({ message: "Error interno al actualizar la foto de portada." });
+    const oldPicResult = await db.query('SELECT "coverPhotoPath" FROM users WHERE "userId" = $1', [userId]);
+    if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].coverPhotoPath) {
+        await deleteLocalFile(oldPicResult.rows[0].coverPhotoPath); // <--- Usa la nueva función de borrado
     }
+
+    await db.query('UPDATE users SET "coverPhotoPath" = $1 WHERE "userId" = $2', [imageUrl, userId]);
+    res.json({ message: "Foto de portada actualizada.", filePath: imageUrl });
+    
+    } catch (error) {
+        console.error("[API UploadCoverPhoto Local] Error:", error);
+        res.status(500).json({ message: "Error interno al actualizar la foto de portada." });
+}
 });
 
 // --- ENDPOINTS DE ACCIÓN SOCIAL --- (Sin cambios, se mantienen como estaban)
