@@ -83,19 +83,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let profilePicSrc = 'placeholder-profile.jpg'; // Imagen por defecto
             if (user.profilePhotoPath) {
-                // Si profilePhotoPath ya es una URL completa (http o https), usarla directamente.
-                // Esto es lo esperado para las URLs de S3.
                 if (user.profilePhotoPath.startsWith('http://') || user.profilePhotoPath.startsWith('https://')) {
                     profilePicSrc = user.profilePhotoPath;
                 } 
-                // Fallback para rutas relativas locales (si todavía usas este sistema para algunas imágenes)
+                // --- ¡AÑADE ESTA CONDICIÓN! ---
+                else if (user.profilePhotoPath.startsWith('/socianark/uploads/')) {
+                    profilePicSrc = user.profilePhotoPath; // La ruta ya es correcta
+                }
+                // --- FIN DE LA MODIFICACIÓN ---
                 else if (user.profilePhotoPath.startsWith('uploads/')) { 
-                    profilePicSrc = `/${user.profilePhotoPath}`; // Añadir '/' si es una ruta relativa desde la raíz
+                    profilePicSrc = `/${user.profilePhotoPath}`;
                 } 
-                // Si no es una URL completa ni una ruta 'uploads/', podría ser un error o un path inesperado.
-                // En producción, con S3, siempre debería ser una URL completa.
                 else {
-                    console.warn(`[Search Results] Formato de profilePhotoPath no reconocido para el usuario ${user.userId}: ${user.profilePhotoPath}. Usando placeholder.`);
+                    console.warn(`[Search Results] Formato de profilePhotoPath no reconocido...`);
                     // profilePicSrc se mantiene como 'placeholder-profile.jpg'
                 }
             }
