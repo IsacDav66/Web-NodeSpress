@@ -137,35 +137,27 @@ router.post('/upload/profile-photo', uploadToMemory.single('profileImage'), asyn
     if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo o el tipo no es válido.' });
     const userId = req.body.userId;
     if (!userId) return res.status(400).json({ message: "Falta el ID del usuario." });
-    const fileExtension = path.extname(req.file.originalname);
-    const s3FileKey = `profile_pics/${userId}-${Date.now()}${fileExtension}`;
-    const s3UploadParams = {
-        Bucket: process.env.R2_BUCKET_NAME,
-        Key: s3FileKey, Body: req.file.buffer,
-        ContentType: req.file.mimetype, ACL: 'public-read'
-    };
 
-    try {
-    // --- INICIO DE LA MODIFICACIÓN ---
+    // 1. Crear el nombre del archivo final con extensión .webp
+    const s3FileKey = `profile_pics/${userId}-${Date.now()}.webp`;
 
-    // 1. Procesar la imagen con Sharp
-    const optimizedBuffer = await sharp(req.file.buffer)
-        .resize({ width: 250, height: 250, fit: 'cover' }) // Redimensiona a un cuadrado de 250x250
-        .webp({ quality: 80 }) // Convierte a WebP (más ligero) con 80% de calidad
-        .toBuffer();
+    try { // <-- El try/catch debe empezar aquí
+        // 2. Procesar la imagen con Sharp
+        const processedImageBuffer = await sharp(req.file.buffer)
+            .resize({ width: 250, height: 250, fit: 'cover' }) // Un buen tamaño para fotos de perfil
+            .webp({ quality: 80 })
+            .toBuffer();
 
-    // 2. Cambiar la extensión del archivo y los parámetros de subida
-    const fileExtension = '.webp'; // Usaremos .webp como nueva extensión
-    const s3FileKey = `profile_pics/${userId}-${Date.now()}${fileExtension}`;
-    const s3UploadParams = {
-        Bucket: process.env.R2_BUCKET_NAME,
-        Key: s3FileKey,
-        Body: optimizedBuffer, // <--- USA EL BUFFER OPTIMIZADO
-        ContentType: 'image/webp', // <--- CAMBIA EL TIPO DE CONTENIDO
-        ACL: 'public-read'
-    };
-
-    // --- FIN DE LA MODIFICACIÓN ---
+        // 3. Definir los parámetros de subida con la imagen procesada
+        const s3UploadParams = {
+            Bucket: process.env.R2_BUCKET_NAME,
+            Key: s3FileKey,
+            Body: processedImageBuffer,
+            ContentType: 'image/webp',
+            ACL: 'public-read'
+        };
+        
+        // 4. Subir el archivo y continuar con la lógica...
         await s3.upload(s3UploadParams).promise();
     
         // Construimos la URL pública nosotros mismos (esta es la corrección)
@@ -203,38 +195,29 @@ router.post('/upload/cover-photo', uploadToMemory.single('coverImage'), async (r
     if (!req.file) return res.status(400).json({ message: 'No se subió ningún archivo o el tipo no es válido.' });
     const userId = req.body.userId;
     if (!userId) return res.status(400).json({ message: "Falta el ID del usuario." });
-    const fileExtension = path.extname(req.file.originalname);
-    const s3FileKey = `cover_pics/${userId}-${Date.now()}${fileExtension}`;
-    const s3UploadParams = {
-        Bucket: process.env.R2_BUCKET_NAME,
-        Key: s3FileKey, Body: req.file.buffer,
-        ContentType: req.file.mimetype, ACL: 'public-read'
-    };
 
-    try {
-    // --- INICIO DE LA MODIFICACIÓN ---
+    // 1. Crear el nombre del archivo final con extensión .webp
+    const s3FileKey = `cover_pics/${userId}-${Date.now()}.webp`;
 
-    // 1. Procesar la imagen con Sharp
-    const optimizedBuffer = await sharp(req.file.buffer)
-        .resize({ width: 1200, withoutEnlargement: true }) // Redimensiona a un ancho máximo de 1200px, sin agrandar si es más pequeña
-        .webp({ quality: 75 }) // Convierte a WebP con 75% de calidad
-        .toBuffer();
+    try { // <-- El try/catch debe empezar aquí
+        // 2. Procesar la imagen con Sharp
+        const processedImageBuffer = await sharp(req.file.buffer)
+            .resize({ width: 1200, withoutEnlargement: true }) // Ancho máximo de 1200px para portadas
+            .webp({ quality: 75 })
+            .toBuffer();
 
-    // 2. Cambiar la extensión del archivo y los parámetros de subida
-    const fileExtension = '.webp';
-    const s3FileKey = `cover_pics/${userId}-${Date.now()}${fileExtension}`;
-    const s3UploadParams = {
-        Bucket: process.env.R2_BUCKET_NAME,
-        Key: s3FileKey,
-        Body: optimizedBuffer, // <--- USA EL BUFFER OPTIMIZADO
-        ContentType: 'image/webp', // <--- CAMBIA EL TIPO DE CONTENIDO
-        ACL: 'public-read'
-    };
-
-    // --- FIN DE LA MODIFICACIÓN ---
-
+        // 3. Definir los parámetros de subida con la imagen procesada
+        const s3UploadParams = {
+            Bucket: process.env.R2_BUCKET_NAME,
+            Key: s3FileKey,
+            Body: processedImageBuffer,
+            ContentType: 'image/webp',
+            ACL: 'public-read'
+        };
+        
+        // 4. Subir el archivo y continuar...
         await s3.upload(s3UploadParams).promise();
-        const imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`; // <-- ASÍ
+        const imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`;
 
         const oldPicResult = await db.query('SELECT "coverPhotoPath" FROM users WHERE "userId" = $1', [userId]);
         if (oldPicResult.rows.length > 0 && oldPicResult.rows[0].coverPhotoPath) {

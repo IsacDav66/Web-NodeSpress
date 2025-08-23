@@ -74,45 +74,32 @@ router.post('/', uploadToMemory.single('postImage'), async (req, res) => {
 
     let imageUrl = null;
     if (req.file) {
-            // --- INICIO DE LA MODIFICACIÓN ---
+        // 1. Crear el nombre del archivo final
+        const s3FileKey = `post_images/${userId}-${Date.now()}.webp`;
+
         try {
-            const optimizedBuffer = await sharp(req.file.buffer)
-                .resize({ width: 800, withoutEnlargement: true }) // Ancho máximo de 800px para publicaciones
+            // 2. Procesar la imagen con Sharp
+            const processedImageBuffer = await sharp(req.file.buffer)
+                .resize({ width: 1200, withoutEnlargement: true }) // Un buen ancho para imágenes de posts
                 .webp({ quality: 80 })
                 .toBuffer();
 
-            const fileExtension = '.webp';
-            const s3FileKey = `post_images/${userId}-${Date.now()}${fileExtension}`;
+            // 3. Definir parámetros de subida
             const s3UploadParams = {
                 Bucket: process.env.R2_BUCKET_NAME,
                 Key: s3FileKey,
-                Body: optimizedBuffer,
+                Body: processedImageBuffer,
                 ContentType: 'image/webp',
                 ACL: 'public-read'
             };
-
+            
+            // 4. Subir y construir la URL
             await s3.upload(s3UploadParams).promise();
             imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`;
 
-        } catch (processingError) { // Un catch específico para el error de procesamiento
-            console.error("[API POST /posts] Error procesando la imagen con Sharp:", processingError);
+        } catch (error) { // Un solo catch para el procesamiento y la subida
+            console.error("[API POST /posts] Error procesando o subiendo imagen:", error);
             return res.status(500).json({ message: "Error al procesar la imagen de la publicación." });
-        }
-        // --- FIN DE LA MODIFICACIÓN ---
-        const fileExtension = path.extname(req.file.originalname);
-        const s3FileKey = `post_images/${userId}-${Date.now()}${fileExtension}`;
-        const s3UploadParams = {
-            Bucket: process.env.R2_BUCKET_NAME,
-            Key: s3FileKey, Body: req.file.buffer,
-            ContentType: req.file.mimetype, ACL: 'public-read'
-        };
-        try {
-            //const s3UploadResult = await s3.upload(s3UploadParams).promise();
-            await s3.upload(s3UploadParams).promise();
-            imageUrl = `${process.env.PUBLIC_R2_URL}/${s3FileKey}`;
-        } catch (s3Error) {
-            console.error("[API POST /posts] Error subiendo imagen a S3:", s3Error);
-            return res.status(500).json({ message: "Error al subir la imagen de la publicación." });
         }
     }
 
